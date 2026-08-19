@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrmImobiliaria.Application;
 using CrmImobiliaria.Infrastructure;
 using CrmImobiliaria.Infrastructure.Identity;
@@ -5,9 +6,16 @@ using CrmImobiliaria.Infrastructure.Persistence;
 using CrmImobiliaria.Web.Components;
 using CrmImobiliaria.Web.Components.Account;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
+
+// O container Linux não tem uma cultura de SO instalada (só "C"/POSIX), então sem isso
+// CurrentCulture cai no invariant e formata moeda como "¤0.00" em vez de "R$ 0,00".
+var culturaPadrao = new CultureInfo("pt-BR");
+CultureInfo.DefaultThreadCurrentCulture = culturaPadrao;
+CultureInfo.DefaultThreadCurrentUICulture = culturaPadrao;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +27,13 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddMudServices();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// Persiste as chaves de proteção de dados num diretório com volume dedicado — sem isso, cada
+// restart do container gera chaves novas e invalida na hora todo cookie de login e token anti-CSRF em uso.
+var diretorioChaves = builder.Configuration["DataProtection:KeysPath"] ?? "/app/keys";
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(diretorioChaves))
+    .SetApplicationName("CrmImobiliaria");
 
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();

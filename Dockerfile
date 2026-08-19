@@ -16,16 +16,17 @@ COPY tests/CrmImobiliaria.Domain.Tests/CrmImobiliaria.Domain.Tests.csproj tests/
 RUN dotnet restore CrmImobiliaria.Web/CrmImobiliaria.Web.csproj
 
 COPY . .
-RUN dotnet publish CrmImobiliaria.Web/CrmImobiliaria.Web.csproj -c Release -o /app/publish --no-restore
+RUN dotnet publish CrmImobiliaria.Web/CrmImobiliaria.Web.csproj -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
 # Roda como usuário não-root
-RUN useradd --uid 1654 --user-group --create-home crmapp
+RUN useradd --uid 10001 --user-group --no-log-init --create-home crmapp \
+    && mkdir -p /app/keys && chown -R crmapp:crmapp /app
 USER crmapp
 
-COPY --from=build /app/publish .
+COPY --from=build --chown=crmapp:crmapp /app/publish .
 
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_HTTP_PORTS=8080

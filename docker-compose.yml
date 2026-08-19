@@ -29,9 +29,12 @@ services:
       ConnectionStrings__CrmImobiliaria: "Server=db;Database=CrmImobiliaria;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;MultipleActiveResultSets=true"
       Seed__AdminEmail: ${SEED_ADMIN_EMAIL}
       Seed__AdminPassword: ${SEED_ADMIN_PASSWORD}
+    volumes:
+      - crm_dataprotection_keys:/app/keys
     expose:
       - "8080"
     # Dokploy expõe este serviço publicamente via domínio configurado no painel (porta 8080).
 
 volumes:
   crm_db_data:
+  crm_dataprotection_keys:
