@@ -1,0 +1,31 @@
+@inject IJSRuntime JS
+
+<div id="@_containerId">
+    <MudTextField T="string" @bind-Value="Value" @bind-Value:after="AoSairDoCampoAsync"
+                 Label="@Label" Required="@Required" InputType="InputType.Telephone" />
+</div>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+
+    // "telefone" ou "cpfcnpj" — decide qual máscara aplicar e, no caso de cpfcnpj, o JS detecta
+    // sozinho CPF (até 11 dígitos) vs CNPJ (12 a 14 dígitos) conforme a pessoa digita.
+    [Parameter, EditorRequired] public string Mascara { get; set; } = "telefone";
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public bool Required { get; set; }
+
+    private readonly string _containerId = $"campo-mascarado-{Guid.NewGuid():N}";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await JS.InvokeVoidAsync("mascaras.iniciar", _containerId, Mascara);
+    }
+
+    private async Task AoSairDoCampoAsync()
+    {
+        Value = Mascara == "cpfcnpj" ? Mascaras.FormatarCpfCnpj(Value) : Mascaras.FormatarTelefone(Value);
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

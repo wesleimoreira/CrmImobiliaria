@@ -17,8 +17,7 @@
             <MudTextField T="string" @bind-Value="modelo.Nome" Label="Nome" Required="true" />
         </MudItem>
         <MudItem xs="12" md="6">
-            <MudTextField T="string" @bind-Value="modelo.Telefone" Label="Telefone" Required="true" InputType="InputType.Telephone"
-                         @bind-Value:after="@(() => modelo.Telefone = Mascaras.FormatarTelefone(modelo.Telefone)!)" />
+            <CampoMascarado @bind-Value="modelo.Telefone" Mascara="telefone" Label="Telefone" Required="true" />
         </MudItem>
         <MudItem xs="12" md="6">
             <MudTextField T="string" @bind-Value="modelo.Email" Label="E-mail" InputType="InputType.Email" />

@@ -60,8 +60,7 @@ else
     <MudPaper Class="pa-4" Elevation="0" Outlined="true">
         <MudGrid>
             <MudItem xs="12" md="6">
-                <MudTextField T="string" @bind-Value="modelo.Telefone" Label="Telefone" Required="true" InputType="InputType.Telephone"
-                             @bind-Value:after="@(() => modelo.Telefone = Mascaras.FormatarTelefone(modelo.Telefone)!)" />
+                <CampoMascarado @bind-Value="modelo.Telefone" Mascara="telefone" Label="Telefone" Required="true" />
             </MudItem>
             <MudItem xs="12" md="6">
                 <MudTextField T="string" @bind-Value="modelo.Email" Label="E-mail" Required="true" InputType="InputType.Email" />
