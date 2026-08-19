@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CRM Imobiliária — Sistema de gestão para imobiliárias</title>
 <meta name="description" content="Sistema de gestão completo para imobiliárias: clientes, funil de vendas, propostas, comissões, locação e loteamentos. Pagamento único, sem mensalidade de software.">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   :root {
     --paper: #EEF1F4;
@@ -143,14 +145,19 @@
   .hero-mark svg { flex: none; }
   .hero h1 {
     font-size: clamp(2rem, 4.4vw, 2.9rem);
-    line-height: 1.14;
+    line-height: 1.28;
     color: #FBFCFE;
-    margin: 14px 0 20px;
-    max-width: 15ch;
+    margin: 14px 0 10px;
   }
   .hero h1 em {
     font-style: normal;
     color: var(--latao-bright);
+  }
+  .hero .subtitulo {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: clamp(1.1rem, 1.8vw, 1.35rem);
+    color: var(--latao-bright);
+    margin: 0 0 22px;
   }
   .hero p.lede {
     font-size: 1.08rem;
@@ -439,6 +446,39 @@
     color: var(--ink-soft);
   }
 
+  /* ---------- SOBRE ---------- */
+  .sobre {
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+  }
+  .sobre-avatar {
+    flex: none;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--navy);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+  }
+  .sobre-texto h2 { margin: 6px 0 12px; }
+  .sobre-texto p { color: var(--ink-soft); max-width: 60ch; margin: 0 0 14px; }
+  .sobre-link {
+    color: var(--latao);
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+  .sobre-link:hover { text-decoration: underline; }
+  @media (max-width: 600px) {
+    .sobre { flex-direction: column; }
+  }
+
   /* ---------- CTA / FOOTER ---------- */
   .cta-band {
     background: linear-gradient(180deg, #0A1622, var(--navy-deep));
@@ -518,7 +558,8 @@
   <header class="hero">
     <div class="wrap">
       <p class="eyebrow">Sistema de gestão para imobiliárias</p>
-      <h1>O sistema de gestão que sua imobiliária usa <em>todo dia</em> — você compra uma vez, é seu para sempre</h1>
+      <h1>O sistema que sua imobiliária usa <em>todo dia</em></h1>
+      <p class="subtitulo">Você compra uma vez — e é seu para sempre.</p>
       <p class="lede">Do primeiro contato do cliente até o repasse do aluguel: cadastro, funil de vendas, propostas, comissões, locação e loteamentos em um único sistema. Pagamento único pelo software, hospedagem própria e sem multa de fidelidade.</p>
       <div class="hero-chips">
         <span>17 módulos de gestão</span>
@@ -681,7 +722,7 @@
             <li>Todos os 17 módulos, sem custo por fora</li>
             <li>Eu configuro o sistema na sua hospedagem</li>
             <li>1 mês de suporte e correções grátis</li>
-            <li>Manutenção depois: opcional, R$ 149/mês ou R$ 1.490/ano</li>
+            <li>Depois: ajustes e evolução do sistema combinados por hora trabalhada</li>
           </ul>
           <div class="plano-rodape">Sem mensalidade obrigatória de software.</div>
         </div>
@@ -736,6 +777,21 @@
     </div>
   </section>
 
+  <!-- SOBRE -->
+  <section class="band">
+    <div class="wrap">
+      <div class="sobre">
+        <div class="sobre-avatar">WM</div>
+        <div class="sobre-texto">
+          <p class="eyebrow">Quem está por trás</p>
+          <h2 class="serif">Weslei Moreira Santana</h2>
+          <p>Sou eu quem desenvolve, implanta e dá suporte nesse sistema — não uma central de atendimento, não uma equipe terceirizada. Construí esse CRM porque conheço de perto a rotina de quem administra imóveis numa cidade do interior e queria oferecer algo do tamanho certo pra isso, com preço justo e alguém acessível do outro lado quando precisar.</p>
+          <a class="sobre-link" href="https://www.linkedin.com/in/weslei-moreira-santana/" target="_blank" rel="noopener">Ver perfil no LinkedIn →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- CTA -->
   <footer class="cta-band">
     <div class="wrap">
@@ -743,10 +799,10 @@
       <h2 class="serif">Vamos ver o sistema rodando com dados da sua imobiliária?</h2>
       <p>Sem compromisso — uma demonstração de 20 minutos já mostra se faz sentido para a rotina da equipe.</p>
       <div class="cta-linha">
-        <a class="cta-botao" href="#contato">Agendar demonstração</a>
-        <div class="cta-contato" id="contato">
-          <strong>Wesley Moreira</strong>
-          <span>wesleymoreira2006@gmail.com</span>
+        <a class="cta-botao" href="mailto:contato@primefrota.com.br?subject=Quero%20agendar%20uma%20demonstra%C3%A7%C3%A3o%20do%20CRM&body=Ol%C3%A1%20Weslei%2C%0A%0AVi%20o%20CRM%20Imobili%C3%A1ria%20e%20quero%20agendar%20uma%20demonstra%C3%A7%C3%A3o.%0A%0ANome%20da%20imobili%C3%A1ria%3A%20%0AMelhor%20hor%C3%A1rio%20pra%20conversar%3A%20">Agendar demonstração</a>
+        <div class="cta-contato">
+          <strong>Weslei Moreira Santana</strong>
+          <span>contato@primefrota.com.br</span>
         </div>
       </div>
       <div class="rodape-final">
