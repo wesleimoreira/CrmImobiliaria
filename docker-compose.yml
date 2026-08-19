@@ -33,7 +33,15 @@ services:
       - crm_dataprotection_keys:/app/keys
     expose:
       - "8080"
-    # Dokploy expõe este serviço publicamente via domínio configurado no painel (porta 8080).
+    networks:
+      - default
+      - proxy
+    # Não publica porta no host — o proxy Caddy (rede externa "proxy") é quem expõe
+    # publicamente, via crm.primefrota.cloud, com HTTPS automático.
+
+networks:
+  proxy:
+    external: true
 
 volumes:
   crm_db_data:

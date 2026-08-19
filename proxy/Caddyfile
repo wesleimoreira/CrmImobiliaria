@@ -1,0 +1,7 @@
+crm.primefrota.cloud {
+    reverse_proxy web:8080
+}
+
+primefrota.cloud {
+    reverse_proxy landing:80
+}
