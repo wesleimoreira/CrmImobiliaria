@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM Imobiliária — Sistema de gestão para imobiliárias</title>
+<meta name="description" content="Sistema de gestão completo para imobiliárias: clientes, funil de vendas, propostas, comissões, locação e loteamentos. Pagamento único, sem mensalidade de software.">
+<style>
+  :root {
+    --paper: #EEF1F4;
+    --surface: #FFFFFF;
+    --surface-2: #E4E9EE;
+    --ink: #16283D;
+    --ink-soft: #47586B;
+    --navy: #1B3A5F;
+    --navy-deep: #0E1E30;
+    --verde: #1C5A46;
+    --latao: #8C6A2F;
+    --latao-bright: #A9793B;
+    --linha: rgba(22, 40, 61, 0.14);
+    --linha-forte: rgba(22, 40, 61, 0.26);
+    --chip-bg: rgba(27, 58, 95, 0.08);
+    --shadow: 0 1px 2px rgba(14, 30, 48, 0.06), 0 8px 24px rgba(14, 30, 48, 0.07);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0B1620;
+      --surface: #101E2C;
+      --surface-2: #17293A;
+      --ink: #E8ECF1;
+      --ink-soft: #A9B7C6;
+      --navy: #4F7EAE;
+      --navy-deep: #060D15;
+      --verde: #4E9E82;
+      --latao: #C7A059;
+      --latao-bright: #D8B571;
+      --linha: rgba(232, 236, 241, 0.12);
+      --linha-forte: rgba(232, 236, 241, 0.22);
+      --chip-bg: rgba(79, 126, 174, 0.16);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 28px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #0B1620;
+    --surface: #101E2C;
+    --surface-2: #17293A;
+    --ink: #E8ECF1;
+    --ink-soft: #A9B7C6;
+    --navy: #4F7EAE;
+    --navy-deep: #060D15;
+    --verde: #4E9E82;
+    --latao: #C7A059;
+    --latao-bright: #D8B571;
+    --linha: rgba(232, 236, 241, 0.12);
+    --linha-forte: rgba(232, 236, 241, 0.22);
+    --chip-bg: rgba(79, 126, 174, 0.16);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 28px rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.55;
+  }
+
+  h1, h2, h3, .serif {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+
+  .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--latao-bright);
+  }
+
+  a { color: inherit; }
+
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+
+  /* ---------- TOPO ---------- */
+  .topo {
+    background: var(--navy-deep);
+    border-bottom: 1px solid rgba(238, 243, 248, 0.08);
+  }
+  .topo .wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 28px;
+  }
+  .login-botao {
+    border: 1px solid rgba(238, 243, 248, 0.28);
+    color: #EEF3F8;
+    font-size: 0.86rem;
+    font-weight: 600;
+    padding: 9px 18px;
+    border-radius: 6px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+  .login-botao:hover { background: rgba(238, 243, 248, 0.08); }
+
+  /* ---------- HERO ---------- */
+  .hero {
+    background:
+      radial-gradient(1100px 460px at 82% -12%, rgba(169, 121, 59, 0.16), transparent 60%),
+      linear-gradient(180deg, var(--navy-deep), #0A1622 88%);
+    color: #EEF3F8;
+    padding: 52px 0 84px;
+  }
+  .hero .eyebrow { color: #C7A664; }
+  .hero-mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #F1F4F8;
+  }
+  .hero-mark svg { flex: none; }
+  .hero h1 {
+    font-size: clamp(2rem, 4.4vw, 2.9rem);
+    line-height: 1.14;
+    color: #FBFCFE;
+    margin: 14px 0 20px;
+    max-width: 15ch;
+  }
+  .hero h1 em {
+    font-style: normal;
+    color: var(--latao-bright);
+  }
+  .hero p.lede {
+    font-size: 1.08rem;
+    color: #C4D0DC;
+    max-width: 54ch;
+    margin: 0 0 32px;
+  }
+  .hero-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .hero-chips span {
+    border: 1px solid rgba(238, 243, 248, 0.22);
+    border-radius: 999px;
+    padding: 7px 16px;
+    font-size: 0.82rem;
+    color: #DCE4EC;
+    background: rgba(238, 243, 248, 0.04);
+  }
+
+  /* ---------- SECTION RHYTHM ---------- */
+  section.band { padding: 64px 0; }
+  section.band + section.band { border-top: 1px solid var(--linha); }
+  .band-head { margin-bottom: 36px; }
+  .band-head h2 {
+    font-size: clamp(1.5rem, 2.6vw, 1.9rem);
+    margin: 8px 0 10px;
+  }
+  .band-head p {
+    color: var(--ink-soft);
+    max-width: 58ch;
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  /* ---------- PROBLEMA ---------- */
+  .queixas {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 8px;
+  }
+  .queixa {
+    background: var(--surface);
+    border: 1px solid var(--linha);
+    border-left: 3px solid var(--latao);
+    border-radius: 4px;
+    padding: 18px 18px 16px;
+    box-shadow: var(--shadow);
+  }
+  .queixa q {
+    display: block;
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-style: italic;
+    font-size: 0.98rem;
+    color: var(--ink);
+    quotes: none;
+    line-height: 1.5;
+  }
+  .queixa cite {
+    display: block;
+    font-style: normal;
+    font-size: 0.76rem;
+    color: var(--ink-soft);
+    margin-top: 10px;
+  }
+  .realidade-local {
+    margin-top: 20px;
+    background: var(--chip-bg);
+    border-radius: 6px;
+    padding: 16px 20px;
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+  }
+  .realidade-local strong { color: var(--ink); }
+
+  /* ---------- MÓDULOS ---------- */
+  .grupos {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .grupo {
+    background: var(--surface);
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+    padding: 20px 20px 18px;
+  }
+  .grupo-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .grupo-head svg { flex: none; color: var(--navy); }
+  .grupo-head h3 {
+    font-size: 1rem;
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .grupo ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .grupo li {
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    padding-left: 14px;
+    position: relative;
+  }
+  .grupo li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.55em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--verde);
+  }
+
+  /* ---------- COMPARATIVO ---------- */
+  .tabela-scroll { overflow-x: auto; }
+  table.comparativo {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+    min-width: 620px;
+  }
+  table.comparativo th, table.comparativo td {
+    text-align: left;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--linha);
+  }
+  table.comparativo thead th {
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    font-weight: 700;
+    border-bottom: 1px solid var(--linha-forte);
+  }
+  table.comparativo th:first-child { width: 38%; }
+  table.comparativo td.sim { color: var(--verde); font-weight: 700; }
+  table.comparativo td.nao { color: var(--ink-soft); }
+  table.comparativo th.destaque, table.comparativo td.destaque {
+    background: var(--chip-bg);
+  }
+  table.comparativo tbody tr:last-child td { border-bottom: none; }
+
+  /* ---------- PLANOS ---------- */
+  .planos {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    align-items: stretch;
+  }
+  .plano {
+    background: var(--surface);
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+    padding: 24px 22px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow);
+    position: relative;
+  }
+  .plano.destaque {
+    border-color: var(--latao);
+    border-width: 2px;
+    padding-top: 22px;
+  }
+  .selo {
+    position: absolute;
+    top: -13px;
+    left: 20px;
+    background: var(--latao);
+    color: #FBF4E7;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 5px 12px;
+    border-radius: 999px;
+  }
+  .plano-nome {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    margin-bottom: 10px;
+  }
+  .plano-preco {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+  .plano-preco .moeda { font-size: 1.1rem; color: var(--ink-soft); }
+  .plano-preco .valor {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: 2.1rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .plano-preco .periodo { font-size: 0.85rem; color: var(--ink-soft); }
+  .plano-sub { font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 18px; min-height: 2.4em; }
+  .plano ul {
+    list-style: none;
+    margin: 0 0 20px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    flex: 1;
+  }
+  .plano li {
+    font-size: 0.87rem;
+    color: var(--ink);
+    padding-left: 20px;
+    position: relative;
+  }
+  .plano li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--verde);
+    font-weight: 700;
+    font-size: 0.82rem;
+  }
+  .plano-rodape {
+    font-size: 0.76rem;
+    color: var(--ink-soft);
+    border-top: 1px solid var(--linha);
+    padding-top: 12px;
+  }
+  .planos-duplo { grid-template-columns: repeat(2, 1fr); }
+  .cta-hosp {
+    background: var(--latao);
+    color: #FBF4E7;
+    font-weight: 700;
+    font-size: 0.88rem;
+    text-align: center;
+    padding: 11px 18px;
+    border-radius: 6px;
+    text-decoration: none;
+    display: block;
+    margin-bottom: 14px;
+  }
+
+  /* ---------- PROCESSO ---------- */
+  .processo {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  .passo {
+    padding: 4px 0;
+  }
+  .passo .indice {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: 1.5rem;
+    color: var(--latao);
+    display: block;
+    margin-bottom: 8px;
+  }
+  .passo h4 {
+    margin: 0 0 6px;
+    font-size: 0.92rem;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .passo p {
+    margin: 0;
+    font-size: 0.83rem;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- CTA / FOOTER ---------- */
+  .cta-band {
+    background: linear-gradient(180deg, #0A1622, var(--navy-deep));
+    color: #EEF3F8;
+    padding: 60px 0 46px;
+  }
+  .cta-band h2 { color: #FBFCFE; font-size: clamp(1.5rem, 3vw, 2rem); }
+  .cta-band p { color: #C4D0DC; max-width: 52ch; }
+  .cta-linha {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 18px;
+    margin-top: 24px;
+  }
+  .cta-botao {
+    background: var(--latao-bright);
+    color: #1B140A;
+    font-weight: 700;
+    font-size: 0.94rem;
+    padding: 13px 26px;
+    border-radius: 6px;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .cta-contato {
+    font-size: 0.86rem;
+    color: #C4D0DC;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .cta-contato strong { color: #EEF3F8; }
+  .rodape-final {
+    margin-top: 44px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(238, 243, 248, 0.12);
+    font-size: 0.74rem;
+    color: #8194A5;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  @media (max-width: 760px) {
+    .queixas, .grupos, .planos, .planos-duplo { grid-template-columns: 1fr; }
+    .processo { grid-template-columns: repeat(2, 1fr); }
+    .plano.destaque { order: -1; }
+    .topo .wrap { padding: 14px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<article>
+
+  <!-- TOPO -->
+  <div class="topo">
+    <div class="wrap">
+      <div class="hero-mark">
+        <svg width="24" height="24" viewBox="0 0 26 26" fill="none">
+          <path d="M4 12.5 13 5l9 7.5" stroke="#C7A664" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M6.5 11v9.5h13V11" stroke="#EEF3F8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M10.5 20.5v-6h5v6" stroke="#C7A664" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        CRM Imobiliária
+      </div>
+      <a class="login-botao" href="https://crm.primefrota.cloud/conta/login">
+        Entrar no sistema
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 3.5 11 8l-5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="wrap">
+      <p class="eyebrow">Sistema de gestão para imobiliárias</p>
+      <h1>O sistema de gestão que sua imobiliária usa <em>todo dia</em> — você compra uma vez, é seu para sempre</h1>
+      <p class="lede">Do primeiro contato do cliente até o repasse do aluguel: cadastro, funil de vendas, propostas, comissões, locação e loteamentos em um único sistema. Pagamento único pelo software, hospedagem própria e sem multa de fidelidade.</p>
+      <div class="hero-chips">
+        <span>17 módulos de gestão</span>
+        <span>Pagamento único, sem mensalidade de software</span>
+        <span>Suporte direto, sem central de atendimento</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- PROBLEMA -->
+  <section class="band">
+    <div class="wrap">
+      <div class="band-head">
+        <p class="eyebrow">O cenário hoje</p>
+        <h2 class="serif">A maioria das imobiliárias da região ainda administra tudo por planilha e WhatsApp</h2>
+        <p>Não por falta de vontade de organizar — os sistemas disponíveis no mercado nacional são caros para o porte de uma imobiliária de cidade do interior, ou prometem muito e entregam pouco depois que o contrato é assinado.</p>
+      </div>
+      <div class="queixas">
+        <div class="queixa">
+          <q>Suporte não existe, com falta de retorno em mensagens do WhatsApp, e-mail e ligações.</q>
+          <cite>Reclamação sobre sistema imobiliário nacional — Reclame Aqui</cite>
+        </div>
+        <div class="queixa">
+          <q>No começo do contrato o atendimento é prestativo, mas depois de assinar, a atenção diminui.</q>
+          <cite>Padrão recorrente em reclamações do setor</cite>
+        </div>
+        <div class="queixa">
+          <q>Multa de cancelamento abusiva mesmo diante de promessas não cumpridas pelo sistema.</q>
+          <cite>Reclamação sobre sistema imobiliário nacional — Reclame Aqui</cite>
+        </div>
+      </div>
+      <div class="realidade-local">
+        <strong>E quando o sistema cabe no bolso,</strong> ele geralmente cobra separado por módulo — locação, financeiro e assinatura eletrônica costumam ficar de fora do plano de entrada, e o valor real só aparece na primeira fatura.
+      </div>
+    </div>
+  </section>
+
+  <!-- SOLUÇÃO -->
+  <section class="band">
+    <div class="wrap">
+      <div class="band-head">
+        <p class="eyebrow">O que o sistema já faz hoje</p>
+        <h2 class="serif">Um só sistema para a operação inteira da imobiliária</h2>
+        <p>Construído para cobrir o ciclo completo — inclusive as partes que os planos de entrada de outros sistemas deixam de fora, como locação e loteamento.</p>
+      </div>
+      <div class="grupos">
+        <div class="grupo">
+          <div class="grupo-head">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="6.5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 17c.7-3.4 3.3-5.5 6.5-5.5s5.8 2.1 6.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <h3>Comercial</h3>
+          </div>
+          <ul>
+            <li>Clientes e corretores</li>
+            <li>Imóveis e anúncios</li>
+            <li>Funil de leads e visitas</li>
+            <li>Propostas e fechamento de venda</li>
+            <li>Comissões por regra e rateio</li>
+          </ul>
+        </div>
+        <div class="grupo">
+          <div class="grupo-head">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="4" y="8" width="12" height="9" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M7 8V5.5A3 3 0 0 1 13 5.5V8" stroke="currentColor" stroke-width="1.5"/></svg>
+            <h3>Locação</h3>
+          </div>
+          <ul>
+            <li>Contratos e estágios da locação</li>
+            <li>Pagamentos de aluguel</li>
+            <li>Repasse ao proprietário</li>
+            <li>Vistorias de entrada e saída</li>
+            <li>Manutenções e prestadores</li>
+          </ul>
+        </div>
+        <div class="grupo">
+          <div class="grupo-head">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 17V8l7-5 7 5v9" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M3 17h14M7 17v-5h6v5" stroke="currentColor" stroke-width="1.5"/></svg>
+            <h3>Loteamentos</h3>
+          </div>
+          <ul>
+            <li>Empreendimentos e quadras</li>
+            <li>Controle de lotes por status</li>
+            <li>Espelho de vendas visual</li>
+            <li>Simulador de parcelamento</li>
+            <li>Reserva de lote</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARATIVO -->
+  <section class="band">
+    <div class="wrap">
+      <div class="band-head">
+        <p class="eyebrow">Por que agora</p>
+        <h2 class="serif">Comparado ao que o mercado nacional cobra hoje</h2>
+        <p>Valores de entrada pesquisados em sistemas imobiliários vendidos no Brasil em 2026, para operações de porte semelhante ao de uma imobiliária de cidade do interior.</p>
+      </div>
+      <div class="tabela-scroll">
+        <table class="comparativo">
+          <thead>
+            <tr>
+              <th>Critério</th>
+              <th class="destaque">Este sistema</th>
+              <th>Sistemas de entrada do mercado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Modelo de cobrança do software</td>
+              <td class="destaque sim">Pagamento único — é seu</td>
+              <td class="nao">Assinatura mensal obrigatória</td>
+            </tr>
+            <tr>
+              <td>Dono da hospedagem</td>
+              <td class="destaque sim">Você — em nome da sua imobiliária</td>
+              <td class="nao">O fornecedor do sistema</td>
+            </tr>
+            <tr>
+              <td>Locação e repasse inclusos</td>
+              <td class="destaque sim">Sim, desde a implantação</td>
+              <td class="nao">Geralmente módulo à parte</td>
+            </tr>
+            <tr>
+              <td>Loteamento e reserva de lote</td>
+              <td class="destaque sim">Incluso</td>
+              <td class="nao">Raro fora de planos corporativos</td>
+            </tr>
+            <tr>
+              <td>Multa de fidelidade</td>
+              <td class="destaque sim">Não há</td>
+              <td class="nao">Comum em contratos anuais</td>
+            </tr>
+            <tr>
+              <td>Suporte</td>
+              <td class="destaque sim">Direto com quem desenvolve</td>
+              <td class="nao">Central de atendimento terceirizada</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLANOS -->
+  <section class="band">
+    <div class="wrap">
+      <div class="band-head">
+        <p class="eyebrow">Investimento</p>
+        <h2 class="serif">Um pagamento único pelo sistema. A hospedagem é sua, à parte.</h2>
+        <p>Você contrata o software uma vez só e passa a ser dono dele. A hospedagem fica no seu nome, direto com a Hostinger — assim você nunca depende de ninguém para continuar no ar.</p>
+      </div>
+      <div class="planos planos-duplo">
+
+        <div class="plano destaque">
+          <div class="plano-nome">Licença do sistema</div>
+          <div class="plano-preco"><span class="moeda">R$</span><span class="valor num">2.997</span><span class="periodo">pagamento único</span></div>
+          <div class="plano-sub">Implantação, migração dos dados e treinamento da equipe inclusos.</div>
+          <ul>
+            <li>Uso do sistema sem prazo de expiração</li>
+            <li>Todos os 17 módulos, sem custo por fora</li>
+            <li>Eu configuro o sistema na sua hospedagem</li>
+            <li>1 mês de suporte e correções grátis</li>
+            <li>Manutenção depois: opcional, R$ 149/mês ou R$ 1.490/ano</li>
+          </ul>
+          <div class="plano-rodape">Sem mensalidade obrigatória de software.</div>
+        </div>
+
+        <div class="plano">
+          <span class="selo">Recomendado</span>
+          <div class="plano-nome">Hospedagem — VPS Hostinger</div>
+          <div class="plano-preco"><span class="moeda">R$</span><span class="valor num">29,99</span><span class="periodo">/mês</span></div>
+          <div class="plano-sub">Plano básico KVM 1 — 1 vCPU, 4 GB RAM, 50 GB NVMe. Precisa de mais? KVM 2, 4 e 8 também disponíveis.</div>
+          <ul>
+            <li>Contratada e paga direto por você, na Hostinger</li>
+            <li>Backup semanal incluso pela própria Hostinger</li>
+            <li>Conta em seu nome — sem depender de mim</li>
+          </ul>
+          <a class="cta-hosp" href="https://www.hostinger.com/br?REFERRALCODE=PRIMEFROTA" target="_blank" rel="noopener">Contratar hospedagem →</a>
+          <div class="plano-rodape">Link de parceria — o preço que você paga não muda.</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- PROCESSO -->
+  <section class="band">
+    <div class="wrap">
+      <div class="band-head">
+        <p class="eyebrow">Como funciona</p>
+        <h2 class="serif">Do primeiro contato ao sistema em uso</h2>
+      </div>
+      <div class="processo">
+        <div class="passo">
+          <span class="indice num">01</span>
+          <h4>Conversa inicial</h4>
+          <p>Entendo a rotina da imobiliária e mostro o sistema funcionando de verdade, sem slide.</p>
+        </div>
+        <div class="passo">
+          <span class="indice num">02</span>
+          <h4>Configuração</h4>
+          <p>Ajudo a contratar a hospedagem, instalo o sistema nela e cadastro imóveis, corretores e regras de comissão.</p>
+        </div>
+        <div class="passo">
+          <span class="indice num">03</span>
+          <h4>Treinamento</h4>
+          <p>Sessão com a equipe até todo mundo estar confortável usando o sistema no dia a dia.</p>
+        </div>
+        <div class="passo">
+          <span class="indice num">04</span>
+          <h4>Acompanhamento</h4>
+          <p>Ajustes nas primeiras semanas de uso real, sem custo adicional.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <footer class="cta-band">
+    <div class="wrap">
+      <p class="eyebrow">Próximo passo</p>
+      <h2 class="serif">Vamos ver o sistema rodando com dados da sua imobiliária?</h2>
+      <p>Sem compromisso — uma demonstração de 20 minutos já mostra se faz sentido para a rotina da equipe.</p>
+      <div class="cta-linha">
+        <a class="cta-botao" href="#contato">Agendar demonstração</a>
+        <div class="cta-contato" id="contato">
+          <strong>Wesley Moreira</strong>
+          <span>wesleymoreira2006@gmail.com</span>
+        </div>
+      </div>
+      <div class="rodape-final">
+        <span>CRM Imobiliária — Sistema de gestão para imobiliárias</span>
+        <span>2026</span>
+      </div>
+    </div>
+  </footer>
+
+</article>
+</body>
+</html>
