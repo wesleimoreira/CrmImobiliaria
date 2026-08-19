@@ -1,0 +1,120 @@
+@page "/visitas/nova"
+@inject ICommandHandler<AgendarVisitaCommand, Guid> AgendarHandler
+@inject IQueryHandler<ListarClientesQuery, List<ClienteListaItemDto>> ListarClientesHandler
+@inject IQueryHandler<ListarImoveisQuery, List<ImovelListaItemDto>> ListarImoveisHandler
+@inject IQueryHandler<ObterImovelPorIdQuery, ImovelDetalheDto?> ObterImovelHandler
+@inject IQueryHandler<ListarCorretoresQuery, List<CorretorResumoDto>> ListarCorretoresHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Agendar Visita</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Agendar Visita</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (clientes is null || imoveis is null || corretores is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="clienteId" Label="Cliente" Required="true">
+                    @foreach (var cliente in clientes)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)cliente.Id)">@cliente.Nome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="corretorId" Label="Corretor" Required="true">
+                    @foreach (var corretor in corretores)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)corretor.Id)">@corretor.Nome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="imovelId" Label="Imóvel" Required="true" @bind-Value:after="OnImovelAlterado">
+                    @foreach (var imovel in imoveis)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)imovel.Id)">@imovel.Endereco</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="anuncioId" Label="Anúncio" Required="true" Disabled="@(anuncios is null || anuncios.Count == 0)">
+                    @if (anuncios is not null)
+                    {
+                        @foreach (var anuncio in anuncios)
+                        {
+                            <MudSelectItem T="Guid?" Value="@((Guid?)anuncio.Id)">@anuncio.Codigo (@anuncio.Tipo)</MudSelectItem>
+                        }
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="DateTime" @bind-Value="dataHora" Label="Data e hora" InputType="InputType.DateTimeLocal" Required="true" />
+            </MudItem>
+        </MudGrid>
+
+        <MudStack Row="true" Class="mt-4" Spacing="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Salvar">Salvar</MudButton>
+            <MudButton Variant="Variant.Text" Href="/visitas">Cancelar</MudButton>
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    private List<ClienteListaItemDto>? clientes;
+    private List<ImovelListaItemDto>? imoveis;
+    private List<CorretorResumoDto>? corretores;
+    private List<AnuncioResumoDto>? anuncios;
+    private string? erro;
+
+    private Guid? clienteId;
+    private Guid? imovelId;
+    private Guid? anuncioId;
+    private Guid? corretorId;
+    private DateTime dataHora = DateTime.Now.AddDays(1);
+
+    protected override async Task OnInitializedAsync()
+    {
+        clientes = (await ListarClientesHandler.HandleAsync(new ListarClientesQuery(null))).Value;
+        imoveis = (await ListarImoveisHandler.HandleAsync(new ListarImoveisQuery(null))).Value;
+        corretores = (await ListarCorretoresHandler.HandleAsync(new ListarCorretoresQuery())).Value;
+    }
+
+    private async Task OnImovelAlterado()
+    {
+        anuncioId = null;
+        anuncios = null;
+
+        if (imovelId is { } id)
+        {
+            var resultado = await ObterImovelHandler.HandleAsync(new ObterImovelPorIdQuery(id));
+            anuncios = resultado.Value?.Anuncios;
+        }
+    }
+
+    private async Task Salvar()
+    {
+        var comando = new AgendarVisitaCommand(
+            clienteId ?? Guid.Empty, imovelId ?? Guid.Empty, anuncioId ?? Guid.Empty, corretorId ?? Guid.Empty, dataHora);
+
+        var resultado = await AgendarHandler.HandleAsync(comando);
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        Navigation.NavigateTo("/visitas");
+    }
+}

@@ -1,0 +1,153 @@
+@page "/repasses/{Id:guid}"
+@inject IQueryHandler<ObterRepassePorIdQuery, RepasseDetalheDto?> ObterHandler
+@inject ICommandHandler<AdicionarDespesaRepasseCommand, bool> AdicionarDespesaHandler
+@inject ICommandHandler<ConfirmarRepasseCommand, bool> ConfirmarHandler
+
+<PageTitle>Repasse</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Repasse</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (repasse is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.caption">Imóvel</MudText>
+                <MudText Typo="Typo.body1">@repasse.Imovel</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Proprietário</MudText>
+                <MudText Typo="Typo.body1">@repasse.Proprietario</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Competência</MudText>
+                <MudText Typo="Typo.body1">@repasse.Mes.ToString("D2")/@repasse.Ano</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Aluguel recebido</MudText>
+                <MudText Typo="Typo.body1">@repasse.ValorAluguelRecebido.ToString("C")</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Taxa de administração</MudText>
+                <MudText Typo="Typo.body1">@repasse.TaxaAdministracao.ToString("0.##")% (@repasse.ValorTaxaAdministracao.ToString("C"))</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Valor líquido</MudText>
+                <MudText Typo="Typo.body1">@repasse.ValorLiquido.ToString("C")</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Status</MudText>
+                <div><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(repasse.Status == StatusRepasse.Realizado ? Color.Success : Color.Warning)">@repasse.Status</MudChip></div>
+            </MudItem>
+            @if (repasse.Status == StatusRepasse.Realizado)
+            {
+                <MudItem xs="12" md="3">
+                    <MudText Typo="Typo.caption">Data do repasse</MudText>
+                    <MudText Typo="Typo.body1">@repasse.DataRepasse?.ToString("d")</MudText>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.caption">Comprovante</MudText>
+                    <MudText Typo="Typo.body1">@repasse.Comprovante</MudText>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
+
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Despesas autorizadas</MudText>
+        <MudTable Items="@repasse.Despesas" Dense="true" Elevation="0" Class="mb-3">
+            <HeaderContent>
+                <MudTh>Descrição</MudTh>
+                <MudTh>Valor</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Descrição">@context.Descricao</MudTd>
+                <MudTd DataLabel="Valor">@context.Valor.ToString("C")</MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText>Nenhuma despesa lançada.</MudText>
+            </NoRecordsContent>
+        </MudTable>
+
+        @if (repasse.Status == StatusRepasse.Pendente)
+        {
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="descricaoDespesa" Label="Descrição" />
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudNumericField T="decimal" @bind-Value="valorDespesa" Label="Valor" Format="N2" Adornment="Adornment.Start" AdornmentText="R$" />
+                </MudItem>
+                <MudItem xs="12" md="3" Class="d-flex align-center">
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="AdicionarDespesa">Adicionar despesa</MudButton>
+                </MudItem>
+            </MudGrid>
+        }
+    </MudPaper>
+
+    @if (repasse.Status == StatusRepasse.Pendente)
+    {
+        <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Confirmar repasse</MudText>
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudDatePicker Label="Data do repasse" @bind-Date="dataRepasse" />
+                </MudItem>
+                <MudItem xs="12" md="5">
+                    <MudTextField T="string" @bind-Value="comprovante" Label="Comprovante" />
+                </MudItem>
+                <MudItem xs="12" md="3" Class="d-flex align-center">
+                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" OnClick="Confirmar">Confirmar repasse</MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    }
+
+    <MudButton Variant="Variant.Text" Href="/repasses">Voltar</MudButton>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private RepasseDetalheDto? repasse;
+    private string? erro;
+    private string? descricaoDespesa;
+    private decimal valorDespesa;
+    private DateTime? dataRepasse = DateTime.Today;
+    private string? comprovante;
+
+    protected override async Task OnInitializedAsync() => await Carregar();
+
+    private async Task Carregar()
+    {
+        var resultado = await ObterHandler.HandleAsync(new ObterRepassePorIdQuery(Id));
+        repasse = resultado.Value;
+    }
+
+    private async Task AdicionarDespesa()
+    {
+        var resultado = await AdicionarDespesaHandler.HandleAsync(new AdicionarDespesaRepasseCommand(Id, descricaoDespesa ?? string.Empty, valorDespesa));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        descricaoDespesa = null;
+        valorDespesa = 0;
+        await Carregar();
+    }
+
+    private async Task Confirmar()
+    {
+        var resultado = await ConfirmarHandler.HandleAsync(new ConfirmarRepasseCommand(Id, DateOnly.FromDateTime(dataRepasse ?? DateTime.Today), comprovante ?? string.Empty));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+}

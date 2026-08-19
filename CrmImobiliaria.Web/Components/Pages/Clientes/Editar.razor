@@ -1,0 +1,268 @@
+@page "/clientes/{Id:guid}"
+@inject IQueryHandler<ObterClientePorIdQuery, ClienteDetalheDto?> ObterHandler
+@inject ICommandHandler<AtualizarClienteCommand, bool> AtualizarHandler
+@inject ICommandHandler<AdicionarPerfilInteresseCommand, bool> AdicionarPerfilHandler
+@inject ICommandHandler<RemoverPerfilInteresseCommand, bool> RemoverPerfilHandler
+@inject IQueryHandler<ListarCorretoresQuery, List<CorretorResumoDto>> ListarCorretoresHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Editar Cliente</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Editar Cliente</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (cliente is null || corretores is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudText Typo="Typo.caption">Nome</MudText>
+                <MudText Typo="Typo.body1">@cliente.Nome</MudText>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudText Typo="Typo.caption">Origem</MudText>
+                <MudText Typo="Typo.body1">@cliente.Origem</MudText>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudText Typo="Typo.caption">Cadastrado em</MudText>
+                <MudText Typo="Typo.body1">@cliente.CriadoEm.ToLocalTime().ToString("g")</MudText>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="modelo.Documento" Label="CPF/CNPJ"
+                             @bind-Value:after="@(() => modelo.Documento = Mascaras.FormatarCpfCnpj(modelo.Documento))" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="modelo.Telefone" Label="Telefone" Required="true" InputType="InputType.Telephone"
+                             @bind-Value:after="@(() => modelo.Telefone = Mascaras.FormatarTelefone(modelo.Telefone)!)" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="modelo.WhatsApp" Label="WhatsApp" InputType="InputType.Telephone"
+                             @bind-Value:after="@(() => modelo.WhatsApp = Mascaras.FormatarTelefone(modelo.WhatsApp))" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="modelo.Email" Label="E-mail" Required="true" InputType="InputType.Email" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Tipo de cliente</MudText>
+                @foreach (var tipo in Enum.GetValues<TipoCliente>())
+                {
+                    <MudCheckBox T="bool" Label="@tipo.ToString()" Value="@modelo.Tipos.Contains(tipo)"
+                                ValueChanged="@((bool v) => AlternarTipo(tipo, v))" Dense="true" Class="mr-4" />
+                }
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="modelo.CorretorResponsavelId" Label="Corretor responsável" Required="true">
+                    @foreach (var corretor in corretores)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)corretor.Id)">@corretor.Nome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField T="string" @bind-Value="modelo.Observacoes" Label="Observações" Lines="3" />
+            </MudItem>
+        </MudGrid>
+
+        <MudStack Row="true" Class="mt-4" Spacing="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Salvar">Salvar</MudButton>
+            <MudButton Variant="Variant.Text" Href="/clientes">Cancelar</MudButton>
+        </MudStack>
+    </MudPaper>
+
+    <MudText Typo="Typo.h5" Class="mt-6 mb-2">Perfil de interesse</MudText>
+    <MudText Typo="Typo.body2" Class="mb-3">Usado pra cruzamento futuro entre cliente e imóveis/anúncios disponíveis.</MudText>
+
+    @if (cliente.PerfisInteresse.Count > 0)
+    {
+        <MudTable Items="@cliente.PerfisInteresse" Hover="true" Elevation="0" Outlined="true" Class="mb-4">
+            <HeaderContent>
+                <MudTh>Negociação</MudTh>
+                <MudTh>Tipo de imóvel</MudTh>
+                <MudTh>Localização</MudTh>
+                <MudTh>Faixa de valor</MudTh>
+                <MudTh>Quartos</MudTh>
+                <MudTh>Forma de pagamento</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Negociação">@context.TipoNegociacao</MudTd>
+                <MudTd DataLabel="Tipo de imóvel">@context.TipoImovel</MudTd>
+                <MudTd DataLabel="Localização">@context.LocalizacaoDesejada</MudTd>
+                <MudTd DataLabel="Faixa de valor">@context.ValorMinimo.ToString("C2") - @context.ValorMaximo.ToString("C2")</MudTd>
+                <MudTd DataLabel="Quartos">@context.NumeroQuartos</MudTd>
+                <MudTd DataLabel="Forma de pagamento">@context.FormaPagamento</MudTd>
+                <MudTd>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" OnClick="@(() => RemoverPerfil(context.Id))" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Novo perfil de interesse</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="3">
+                <MudSelect T="TipoNegociacaoImovel" @bind-Value="novoPerfil.TipoNegociacao" Label="Negociação">
+                    <MudSelectItem T="TipoNegociacaoImovel" Value="TipoNegociacaoImovel.Venda">Venda</MudSelectItem>
+                    <MudSelectItem T="TipoNegociacaoImovel" Value="TipoNegociacaoImovel.Locacao">Locação</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudSelect T="TipoImovel" @bind-Value="novoPerfil.TipoImovel" Label="Tipo de imóvel">
+                    @foreach (var tipo in Enum.GetValues<TipoImovel>())
+                    {
+                        <MudSelectItem T="TipoImovel" Value="@tipo">@tipo</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="novoPerfil.LocalizacaoDesejada" Label="Localização desejada" />
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <MudNumericField T="decimal" @bind-Value="novoPerfil.ValorMinimo" Label="Valor mínimo" Min="0" />
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <MudNumericField T="decimal" @bind-Value="novoPerfil.ValorMaximo" Label="Valor máximo" Min="0" />
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <MudNumericField T="int?" @bind-Value="novoPerfil.NumeroQuartos" Label="Quartos" Min="0" />
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <MudSelect T="FormaPagamento" @bind-Value="novoPerfil.FormaPagamento" Label="Forma de pagamento">
+                    @foreach (var forma in Enum.GetValues<FormaPagamento>())
+                    {
+                        <MudSelectItem T="FormaPagamento" Value="@forma">@forma</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField T="string" @bind-Value="novoPerfil.Observacoes" Label="Observações" />
+            </MudItem>
+        </MudGrid>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-2" OnClick="AdicionarPerfil">Adicionar perfil</MudButton>
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private ClienteDetalheDto? cliente;
+    private List<CorretorResumoDto>? corretores;
+    private string? erro;
+    private readonly ModeloCliente modelo = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultadoCliente = await ObterHandler.HandleAsync(new ObterClientePorIdQuery(Id));
+        cliente = resultadoCliente.Value;
+
+        if (cliente is not null)
+        {
+            modelo.Documento = cliente.Documento;
+            modelo.Telefone = cliente.Telefone;
+            modelo.WhatsApp = cliente.WhatsApp;
+            modelo.Email = cliente.Email;
+            modelo.CorretorResponsavelId = cliente.CorretorResponsavelId;
+            modelo.Observacoes = cliente.Observacoes;
+            foreach (var tipo in cliente.Tipos) modelo.Tipos.Add(tipo);
+        }
+
+        var resultadoCorretores = await ListarCorretoresHandler.HandleAsync(new ListarCorretoresQuery());
+        corretores = resultadoCorretores.Value;
+    }
+
+    private void AlternarTipo(TipoCliente tipo, bool marcado)
+    {
+        if (marcado) modelo.Tipos.Add(tipo);
+        else modelo.Tipos.Remove(tipo);
+    }
+
+    private async Task Salvar()
+    {
+        var comando = new AtualizarClienteCommand(
+            Id, modelo.Telefone, modelo.WhatsApp, modelo.Email, modelo.Tipos.ToList(),
+            modelo.CorretorResponsavelId ?? Guid.Empty, modelo.Documento, modelo.Observacoes);
+
+        var resultado = await AtualizarHandler.HandleAsync(comando);
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        Navigation.NavigateTo("/clientes");
+    }
+
+    private readonly ModeloPerfilInteresse novoPerfil = new();
+
+    private async Task AdicionarPerfil()
+    {
+        var comando = new AdicionarPerfilInteresseCommand(
+            Id, novoPerfil.TipoNegociacao, novoPerfil.TipoImovel, novoPerfil.LocalizacaoDesejada,
+            novoPerfil.ValorMinimo, novoPerfil.ValorMaximo, novoPerfil.NumeroQuartos, novoPerfil.FormaPagamento, novoPerfil.Observacoes);
+
+        var resultado = await AdicionarPerfilHandler.HandleAsync(comando);
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        erro = null;
+        var resultadoCliente = await ObterHandler.HandleAsync(new ObterClientePorIdQuery(Id));
+        cliente = resultadoCliente.Value;
+    }
+
+    private async Task RemoverPerfil(Guid perfilId)
+    {
+        var resultado = await RemoverPerfilHandler.HandleAsync(new RemoverPerfilInteresseCommand(Id, perfilId));
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        erro = null;
+        var resultadoCliente = await ObterHandler.HandleAsync(new ObterClientePorIdQuery(Id));
+        cliente = resultadoCliente.Value;
+    }
+
+    private sealed class ModeloCliente
+    {
+        public string? Documento { get; set; }
+        public string Telefone { get; set; } = "";
+        public string? WhatsApp { get; set; }
+        public string Email { get; set; } = "";
+        public HashSet<TipoCliente> Tipos { get; } = [];
+        public Guid? CorretorResponsavelId { get; set; }
+        public string? Observacoes { get; set; }
+    }
+
+    private sealed class ModeloPerfilInteresse
+    {
+        public TipoNegociacaoImovel TipoNegociacao { get; set; } = TipoNegociacaoImovel.Venda;
+        public TipoImovel TipoImovel { get; set; } = TipoImovel.Apartamento;
+        public string? LocalizacaoDesejada { get; set; }
+        public decimal ValorMinimo { get; set; }
+        public decimal ValorMaximo { get; set; }
+        public int? NumeroQuartos { get; set; }
+        public FormaPagamento FormaPagamento { get; set; } = FormaPagamento.AVista;
+        public string? Observacoes { get; set; }
+    }
+}

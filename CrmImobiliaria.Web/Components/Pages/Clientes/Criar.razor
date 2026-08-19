@@ -1,0 +1,130 @@
+@page "/clientes/novo"
+@inject ICommandHandler<CriarClienteCommand, Guid> CriarHandler
+@inject IQueryHandler<ListarCorretoresQuery, List<CorretorResumoDto>> ListarCorretoresHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Novo Cliente</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Novo Cliente</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (corretores is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="modelo.Nome" Label="Nome" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="modelo.Documento" Label="CPF/CNPJ"
+                             @bind-Value:after="@(() => modelo.Documento = Mascaras.FormatarCpfCnpj(modelo.Documento))" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField T="string" @bind-Value="modelo.Telefone" Label="Telefone" Required="true" InputType="InputType.Telephone"
+                             @bind-Value:after="@(() => modelo.Telefone = Mascaras.FormatarTelefone(modelo.Telefone)!)" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField T="string" @bind-Value="modelo.WhatsApp" Label="WhatsApp" InputType="InputType.Telephone"
+                             @bind-Value:after="@(() => modelo.WhatsApp = Mascaras.FormatarTelefone(modelo.WhatsApp))" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField T="string" @bind-Value="modelo.Email" Label="E-mail" Required="true" InputType="InputType.Email" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Tipo de cliente</MudText>
+                @foreach (var tipo in Enum.GetValues<TipoCliente>())
+                {
+                    <MudCheckBox T="bool" Label="@tipo.ToString()" Value="@modelo.Tipos.Contains(tipo)"
+                                ValueChanged="@((bool v) => AlternarTipo(tipo, v))" Dense="true" Class="mr-4" />
+                }
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="modelo.CorretorResponsavelId" Label="Corretor responsável" Required="true">
+                    @foreach (var corretor in corretores)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)corretor.Id)">@corretor.Nome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="OrigemCliente" @bind-Value="modelo.Origem" Label="Origem">
+                    @foreach (var origem in Enum.GetValues<OrigemCliente>())
+                    {
+                        <MudSelectItem T="OrigemCliente" Value="@origem">@origem</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            @if (modelo.Origem == OrigemCliente.CampanhaExterna)
+            {
+                <MudItem xs="12">
+                    <MudTextField T="string" @bind-Value="modelo.CampanhaEspecifica" Label="Campanha específica" />
+                </MudItem>
+            }
+            <MudItem xs="12">
+                <MudTextField T="string" @bind-Value="modelo.Observacoes" Label="Observações" Lines="3" />
+            </MudItem>
+        </MudGrid>
+
+        <MudStack Row="true" Class="mt-4" Spacing="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Salvar">Salvar</MudButton>
+            <MudButton Variant="Variant.Text" Href="/clientes">Cancelar</MudButton>
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    private List<CorretorResumoDto>? corretores;
+    private string? erro;
+    private readonly ModeloCliente modelo = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultado = await ListarCorretoresHandler.HandleAsync(new ListarCorretoresQuery());
+        corretores = resultado.Value;
+    }
+
+    private void AlternarTipo(TipoCliente tipo, bool marcado)
+    {
+        if (marcado) modelo.Tipos.Add(tipo);
+        else modelo.Tipos.Remove(tipo);
+    }
+
+    private async Task Salvar()
+    {
+        var comando = new CriarClienteCommand(
+            modelo.Nome, modelo.Telefone, modelo.WhatsApp, modelo.Email, modelo.Tipos.ToList(),
+            modelo.CorretorResponsavelId ?? Guid.Empty, modelo.Origem, modelo.Documento, modelo.CampanhaEspecifica, modelo.Observacoes);
+
+        var resultado = await CriarHandler.HandleAsync(comando);
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        Navigation.NavigateTo("/clientes");
+    }
+
+    private sealed class ModeloCliente
+    {
+        public string Nome { get; set; } = "";
+        public string? Documento { get; set; }
+        public string Telefone { get; set; } = "";
+        public string? WhatsApp { get; set; }
+        public string Email { get; set; } = "";
+        public HashSet<TipoCliente> Tipos { get; } = [];
+        public Guid? CorretorResponsavelId { get; set; }
+        public OrigemCliente Origem { get; set; } = OrigemCliente.Indicacao;
+        public string? CampanhaEspecifica { get; set; }
+        public string? Observacoes { get; set; }
+    }
+}

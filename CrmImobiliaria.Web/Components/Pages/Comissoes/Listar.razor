@@ -1,0 +1,40 @@
+@page "/comissoes"
+@inject IQueryHandler<ListarComissoesQuery, List<ComissaoListaItemDto>> ListarHandler
+
+<PageTitle>Comissões</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Comissões</MudText>
+
+<MudTable Items="@comissoes" Hover="true" Loading="@(comissoes is null)" Elevation="0" Outlined="true">
+    <HeaderContent>
+        <MudTh>Origem</MudTh>
+        <MudTh>Valor base</MudTh>
+        <MudTh>Comissão total</MudTh>
+        <MudTh>Recebida</MudTh>
+        <MudTh>Distribuída</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Origem">@context.OrigemTipo</MudTd>
+        <MudTd DataLabel="Valor base">@context.ValorBase.ToString("C")</MudTd>
+        <MudTd DataLabel="Comissão total">@context.ComissaoTotal.ToString("C")</MudTd>
+        <MudTd DataLabel="Recebida">@context.ComissaoRecebida.ToString("C")</MudTd>
+        <MudTd DataLabel="Distribuída">@context.ComissaoDistribuida.ToString("C")</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Href="@($"/comissoes/{context.Id}")" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>Nenhuma comissão gerada.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<ComissaoListaItemDto>? comissoes;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultado = await ListarHandler.HandleAsync(new ListarComissoesQuery());
+        comissoes = resultado.Value;
+    }
+}

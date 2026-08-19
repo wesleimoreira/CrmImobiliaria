@@ -1,0 +1,142 @@
+@page "/imoveis/novo"
+@inject ICommandHandler<CriarImovelCommand, Guid> CriarHandler
+@inject IQueryHandler<ListarClientesQuery, List<ClienteListaItemDto>> ListarClientesHandler
+@inject IQueryHandler<ListarCorretoresQuery, List<CorretorResumoDto>> ListarCorretoresHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Novo Imóvel</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Novo Imóvel</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (proprietarios is null || corretores is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudSelect T="Guid?" @bind-Value="modelo.ProprietarioId" Label="Proprietário" Required="true">
+                    @foreach (var cliente in proprietarios)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)cliente.Id)">@cliente.Nome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudSelect T="Guid?" @bind-Value="modelo.CorretorCaptadorId" Label="Corretor captador" Required="true">
+                    @foreach (var corretor in corretores)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)corretor.Id)">@corretor.Nome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudSelect T="TipoImovel" @bind-Value="modelo.Tipo" Label="Tipo do imóvel">
+                    @foreach (var tipo in Enum.GetValues<TipoImovel>())
+                    {
+                        <MudSelectItem T="TipoImovel" Value="@tipo">@tipo</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" md="8">
+                <MudTextField T="string" @bind-Value="modelo.Logradouro" Label="Logradouro" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField T="string" @bind-Value="modelo.Numero" Label="Número" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="modelo.Complemento" Label="Complemento" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="modelo.Bairro" Label="Bairro" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField T="string" @bind-Value="modelo.Cidade" Label="Cidade" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="2">
+                <MudTextField T="string" @bind-Value="modelo.Uf" Label="UF" MaxLength="2" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField T="string" @bind-Value="modelo.Cep" Label="CEP" Required="true" />
+            </MudItem>
+
+            <MudItem xs="6" md="3">
+                <MudNumericField T="decimal" @bind-Value="modelo.AreaM2" Label="Área (m²)" Required="true" Min="0.01m" />
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <MudNumericField T="int" @bind-Value="modelo.Quartos" Label="Quartos" Min="0" />
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <MudNumericField T="int" @bind-Value="modelo.Suites" Label="Suítes" Min="0" />
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <MudNumericField T="int" @bind-Value="modelo.Garagem" Label="Vagas de garagem" Min="0" />
+            </MudItem>
+        </MudGrid>
+
+        <MudStack Row="true" Class="mt-4" Spacing="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Salvar">Salvar</MudButton>
+            <MudButton Variant="Variant.Text" Href="/imoveis">Cancelar</MudButton>
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    private List<ClienteListaItemDto>? proprietarios;
+    private List<CorretorResumoDto>? corretores;
+    private string? erro;
+    private readonly ModeloImovel modelo = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultadoClientes = await ListarClientesHandler.HandleAsync(new ListarClientesQuery(null));
+        proprietarios = resultadoClientes.Value;
+
+        var resultadoCorretores = await ListarCorretoresHandler.HandleAsync(new ListarCorretoresQuery());
+        corretores = resultadoCorretores.Value;
+    }
+
+    private async Task Salvar()
+    {
+        var comando = new CriarImovelCommand(
+            modelo.ProprietarioId ?? Guid.Empty, modelo.CorretorCaptadorId ?? Guid.Empty, modelo.Tipo,
+            modelo.Logradouro, modelo.Numero, modelo.Complemento, modelo.Bairro, modelo.Cidade, modelo.Uf, modelo.Cep,
+            modelo.AreaM2, modelo.Quartos, modelo.Suites, modelo.Garagem);
+
+        var resultado = await CriarHandler.HandleAsync(comando);
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        Navigation.NavigateTo($"/imoveis/{resultado.Value}");
+    }
+
+    private sealed class ModeloImovel
+    {
+        public Guid? ProprietarioId { get; set; }
+        public Guid? CorretorCaptadorId { get; set; }
+        public TipoImovel Tipo { get; set; } = TipoImovel.Apartamento;
+        public string Logradouro { get; set; } = "";
+        public string Numero { get; set; } = "";
+        public string? Complemento { get; set; }
+        public string Bairro { get; set; } = "";
+        public string Cidade { get; set; } = "";
+        public string Uf { get; set; } = "";
+        public string Cep { get; set; } = "";
+        public decimal AreaM2 { get; set; } = 1;
+        public int Quartos { get; set; }
+        public int Suites { get; set; }
+        public int Garagem { get; set; }
+    }
+}

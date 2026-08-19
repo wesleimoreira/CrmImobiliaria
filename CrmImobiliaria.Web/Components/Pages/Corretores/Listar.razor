@@ -1,0 +1,51 @@
+@page "/corretores"
+@inject IQueryHandler<ListarCorretoresQuery, List<CorretorResumoDto>> ListarHandler
+
+<PageTitle>Corretores</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Corretores</MudText>
+
+<div class="d-flex justify-end mb-4">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Href="/corretores/novo">
+        Novo Corretor
+    </MudButton>
+</div>
+
+<MudTable Items="@corretores" Hover="true" Loading="@(corretores is null)" Elevation="0" Outlined="true">
+    <HeaderContent>
+        <MudTh>Nome</MudTh>
+        <MudTh>CRECI</MudTh>
+        <MudTh>Telefone</MudTh>
+        <MudTh>E-mail</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Nome">@context.Nome</MudTd>
+        <MudTd DataLabel="CRECI">@context.Creci</MudTd>
+        <MudTd DataLabel="Telefone">@context.Telefone</MudTd>
+        <MudTd DataLabel="E-mail">@context.Email</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                     Color="@(context.Status == "Ativo" ? Color.Success : context.Status == "Suspenso" ? Color.Warning : Color.Default)">
+                @context.Status
+            </MudChip>
+        </MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Href="@($"/corretores/{context.Id}")" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>Nenhum corretor cadastrado.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<CorretorResumoDto>? corretores;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultado = await ListarHandler.HandleAsync(new ListarCorretoresQuery());
+        corretores = resultado.Value;
+    }
+}

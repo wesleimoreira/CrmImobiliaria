@@ -1,0 +1,173 @@
+@page "/leads/{Id:guid}"
+@inject IQueryHandler<ObterLeadPorIdQuery, LeadDetalheDto?> ObterHandler
+@inject IQueryHandler<ListarCorretoresQuery, List<CorretorResumoDto>> ListarCorretoresHandler
+@inject ICommandHandler<AvancarEstagioLeadCommand, bool> AvancarHandler
+@inject ICommandHandler<MarcarLeadPerdidoCommand, bool> MarcarPerdidoHandler
+@inject ICommandHandler<ReabrirLeadCommand, bool> ReabrirHandler
+@inject ICommandHandler<TransferirCorretorLeadCommand, bool> TransferirHandler
+
+<PageTitle>Lead</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Lead</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (lead is null || corretores is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudText Typo="Typo.caption">Cliente</MudText>
+                <MudText Typo="Typo.body1">@lead.ClienteNome</MudText>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudText Typo="Typo.caption">Corretor</MudText>
+                <MudText Typo="Typo.body1">@lead.CorretorNome</MudText>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudText Typo="Typo.caption">Estágio atual</MudText>
+                <div>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                             Color="@(lead.EstagioAtual == EstagioFunil.Perdido ? Color.Error : lead.EstagioAtual == EstagioFunil.Fechado ? Color.Success : Color.Info)">
+                        @lead.EstagioAtual
+                    </MudChip>
+                </div>
+            </MudItem>
+            @if (lead.MotivoPerda is not null)
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.caption">Motivo da perda</MudText>
+                    <MudText Typo="Typo.body1">@lead.MotivoPerda</MudText>
+                </MudItem>
+            }
+        </MudGrid>
+
+        @if (lead.EstagioAtual == EstagioFunil.Perdido)
+        {
+            <MudButton Class="mt-3" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success" OnClick="Reabrir">Reabrir</MudButton>
+        }
+        else
+        {
+            <MudText Typo="Typo.subtitle2" Class="mt-4 mb-1">Avançar estágio</MudText>
+            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" Class="mb-3">
+                @foreach (var estagio in ProximosEstagios(lead.EstagioAtual))
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="@(() => Avancar(estagio))">@estagio</MudButton>
+                }
+            </MudStack>
+
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="motivoPerda" Label="Motivo (pra marcar como perdido)" />
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" Class="mt-1" OnClick="MarcarPerdido">Marcar como perdido</MudButton>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudSelect T="Guid?" @bind-Value="novoCorretorId" Label="Transferir para corretor">
+                        @foreach (var corretor in corretores.Where(c => c.Id != lead.CorretorId))
+                        {
+                            <MudSelectItem T="Guid?" Value="@((Guid?)corretor.Id)">@corretor.Nome</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="mt-1" OnClick="Transferir">Transferir</MudButton>
+                </MudItem>
+            </MudGrid>
+        }
+    </MudPaper>
+
+    <MudText Typo="Typo.h5" Class="mb-2">Histórico</MudText>
+    <MudTimeline>
+        @foreach (var item in lead.Historico.OrderByDescending(h => h.DataHora))
+        {
+            <MudTimelineItem Size="Size.Small">
+                <MudText Typo="Typo.body2"><b>@item.Estagio</b> — @item.DataHora.ToLocalTime().ToString("g")</MudText>
+                @if (!string.IsNullOrWhiteSpace(item.Observacao))
+                {
+                    <MudText Typo="Typo.caption">@item.Observacao</MudText>
+                }
+            </MudTimelineItem>
+        }
+    </MudTimeline>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private static readonly EstagioFunil[] Sequencia =
+    [
+        EstagioFunil.NovoLead, EstagioFunil.Contato, EstagioFunil.Qualificado,
+        EstagioFunil.ImovelApresentado, EstagioFunil.Visita, EstagioFunil.Proposta,
+        EstagioFunil.Negociacao, EstagioFunil.Fechado
+    ];
+
+    private LeadDetalheDto? lead;
+    private List<CorretorResumoDto>? corretores;
+    private string? erro;
+    private string? motivoPerda;
+    private Guid? novoCorretorId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Carregar();
+
+        var resultadoCorretores = await ListarCorretoresHandler.HandleAsync(new ListarCorretoresQuery());
+        corretores = resultadoCorretores.Value;
+    }
+
+    private async Task Carregar()
+    {
+        var resultado = await ObterHandler.HandleAsync(new ObterLeadPorIdQuery(Id));
+        lead = resultado.Value;
+    }
+
+    private static List<EstagioFunil> ProximosEstagios(EstagioFunil atual)
+    {
+        // RegistrarContato/Qualificar/RegistrarVisita/RegistrarProposta/IniciarNegociacao/Fechar
+        // cobrem esses 6 estágios — NovoLead nunca é destino (é o inicial).
+        var alvos = new[] { EstagioFunil.Contato, EstagioFunil.Qualificado, EstagioFunil.Visita, EstagioFunil.Proposta, EstagioFunil.Negociacao, EstagioFunil.Fechado };
+        var indiceAtual = Array.IndexOf(Sequencia, atual);
+        return alvos.Where(a => Array.IndexOf(Sequencia, a) > indiceAtual).ToList();
+    }
+
+    private async Task Avancar(EstagioFunil estagio)
+    {
+        var resultado = await AvancarHandler.HandleAsync(new AvancarEstagioLeadCommand(Id, estagio, null));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+
+    private async Task MarcarPerdido()
+    {
+        var resultado = await MarcarPerdidoHandler.HandleAsync(new MarcarLeadPerdidoCommand(Id, motivoPerda ?? ""));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        motivoPerda = null;
+        await Carregar();
+    }
+
+    private async Task Reabrir()
+    {
+        var resultado = await ReabrirHandler.HandleAsync(new ReabrirLeadCommand(Id));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+
+    private async Task Transferir()
+    {
+        if (novoCorretorId is not { } corretorId) return;
+
+        var resultado = await TransferirHandler.HandleAsync(new TransferirCorretorLeadCommand(Id, corretorId));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        novoCorretorId = null;
+        await Carregar();
+    }
+}

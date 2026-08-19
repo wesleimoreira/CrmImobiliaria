@@ -1,0 +1,108 @@
+@page "/espelho-vendas"
+@inject IQueryHandler<ListarEmpreendimentosQuery, List<EmpreendimentoListaItemDto>> ListarEmpreendimentosHandler
+@inject IQueryHandler<ListarLotesQuery, List<LoteListaItemDto>> ListarLotesHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Espelho de Vendas</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Espelho de Vendas</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" sm="8">
+            <MudSelect T="Guid?" @bind-Value="empreendimentoId" Label="Empreendimento" @bind-Value:after="Carregar">
+                @if (empreendimentos is not null)
+                {
+                    @foreach (var emp in empreendimentos)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)emp.Id)">@emp.Nome</MudSelectItem>
+                    }
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4" Class="d-flex align-center flex-wrap" Style="gap: 12px;">
+            @foreach (var (status, cor) in Legenda)
+            {
+                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                    <MudAvatar Size="Size.Small" Color="@cor" Style="width:16px;height:16px;" />
+                    <MudText Typo="Typo.caption">@status</MudText>
+                </MudStack>
+            }
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@if (empreendimentoId is null)
+{
+    <MudAlert Severity="Severity.Info">Selecione um empreendimento para visualizar o espelho de vendas.</MudAlert>
+}
+else if (lotes is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (lotes.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">Nenhum lote cadastrado para este empreendimento.</MudAlert>
+}
+else
+{
+    @foreach (var grupo in lotes.GroupBy(l => l.Quadra).OrderBy(g => g.Key))
+    {
+        <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.subtitle1" Class="mb-3">Quadra @grupo.Key</MudText>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                @foreach (var lote in grupo.OrderBy(l => l.Numero))
+                {
+                    <MudTooltip Text="@($"{lote.Numero} — {lote.Status} — {lote.ValorVigente:C}")">
+                        <MudButton Variant="Variant.Filled" Color="@CorPorStatus(lote.Status)" Size="Size.Small"
+                                   Style="min-width:56px;" OnClick="@(() => Navigation.NavigateTo($"/lotes/{lote.Id}"))">
+                            @lote.Numero
+                        </MudButton>
+                    </MudTooltip>
+                }
+            </div>
+        </MudPaper>
+    }
+}
+
+@code {
+    private List<EmpreendimentoListaItemDto>? empreendimentos;
+    private List<LoteListaItemDto>? lotes;
+    private Guid? empreendimentoId;
+
+    private static readonly (string Status, Color Cor)[] Legenda =
+    [
+        ("Disponível", Color.Default),
+        ("Reservado", Color.Info),
+        ("Em proposta", Color.Warning),
+        ("Vendido", Color.Success),
+        ("Bloqueado/Distrato", Color.Error)
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        empreendimentos = (await ListarEmpreendimentosHandler.HandleAsync(new ListarEmpreendimentosQuery())).Value;
+    }
+
+    private async Task Carregar()
+    {
+        if (empreendimentoId is null)
+        {
+            lotes = null;
+            return;
+        }
+
+        lotes = null;
+        var resultado = await ListarLotesHandler.HandleAsync(new ListarLotesQuery(empreendimentoId));
+        lotes = resultado.Value;
+    }
+
+    private static Color CorPorStatus(StatusLote status) => status switch
+    {
+        StatusLote.Vendido => Color.Success,
+        StatusLote.Bloqueado or StatusLote.Distrato => Color.Error,
+        StatusLote.Reservado => Color.Info,
+        StatusLote.EmProposta => Color.Warning,
+        _ => Color.Default
+    };
+}

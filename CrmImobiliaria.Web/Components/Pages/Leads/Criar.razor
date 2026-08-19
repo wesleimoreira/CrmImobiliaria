@@ -1,0 +1,77 @@
+@page "/leads/novo"
+@inject ICommandHandler<CriarLeadCommand, Guid> CriarHandler
+@inject IQueryHandler<ListarClientesQuery, List<ClienteListaItemDto>> ListarClientesHandler
+@inject IQueryHandler<ListarCorretoresQuery, List<CorretorResumoDto>> ListarCorretoresHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Novo Lead</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Novo Lead</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (clientes is null || corretores is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="clienteId" Label="Cliente" Required="true">
+                    @foreach (var cliente in clientes)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)cliente.Id)">@cliente.Nome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="corretorId" Label="Corretor" Required="true">
+                    @foreach (var corretor in corretores)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)corretor.Id)">@corretor.Nome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+
+        <MudStack Row="true" Class="mt-4" Spacing="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Salvar">Salvar</MudButton>
+            <MudButton Variant="Variant.Text" Href="/leads">Cancelar</MudButton>
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    private List<ClienteListaItemDto>? clientes;
+    private List<CorretorResumoDto>? corretores;
+    private string? erro;
+    private Guid? clienteId;
+    private Guid? corretorId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultadoClientes = await ListarClientesHandler.HandleAsync(new ListarClientesQuery(null));
+        clientes = resultadoClientes.Value;
+
+        var resultadoCorretores = await ListarCorretoresHandler.HandleAsync(new ListarCorretoresQuery());
+        corretores = resultadoCorretores.Value;
+    }
+
+    private async Task Salvar()
+    {
+        var resultado = await CriarHandler.HandleAsync(new CriarLeadCommand(clienteId ?? Guid.Empty, corretorId ?? Guid.Empty));
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        Navigation.NavigateTo($"/leads/{resultado.Value}");
+    }
+}

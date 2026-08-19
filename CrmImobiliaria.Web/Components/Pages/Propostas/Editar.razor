@@ -1,0 +1,233 @@
+@page "/propostas/{Id:guid}"
+@inject IQueryHandler<ObterPropostaPorIdQuery, PropostaDetalheDto?> ObterHandler
+@inject ICommandHandler<RegistrarContrapropostaCommand, bool> ContrapropostaHandler
+@inject ICommandHandler<AceitarPropostaCommand, bool> AceitarHandler
+@inject ICommandHandler<RecusarPropostaCommand, bool> RecusarHandler
+@inject ICommandHandler<CancelarPropostaCommand, bool> CancelarHandler
+@inject ICommandHandler<FecharVendaCommand, Guid> FecharVendaHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Proposta</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Proposta</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (proposta is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Cliente</MudText>
+                <MudText Typo="Typo.body1">@proposta.ClienteNome</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Imóvel</MudText>
+                <MudText Typo="Typo.body1">@proposta.ImovelEndereco</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Corretor</MudText>
+                <MudText Typo="Typo.body1">@proposta.CorretorNome</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Status</MudText>
+                <div><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@proposta.Status</MudChip></div>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Valor anunciado</MudText>
+                <MudText Typo="Typo.body1">@proposta.ValorAnunciado.ToString("C")</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Valor proposto (atual)</MudText>
+                <MudText Typo="Typo.body1">@proposta.ValorProposto.ToString("C")</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Forma de pagamento</MudText>
+                <MudText Typo="Typo.body1">@proposta.FormaPagamento</MudText>
+            </MudItem>
+            @if (proposta.NumeroParcelas is not null)
+            {
+                <MudItem xs="12" md="3">
+                    <MudText Typo="Typo.caption">Parcelamento</MudText>
+                    <MudText Typo="Typo.body1">@proposta.NumeroParcelas x @proposta.ValorParcela?.ToString("C") (entrada @proposta.Entrada?.ToString("C"))</MudText>
+                </MudItem>
+            }
+            @if (!string.IsNullOrWhiteSpace(proposta.MotivoRecusa))
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.caption">Motivo da recusa</MudText>
+                    <MudText Typo="Typo.body1">@proposta.MotivoRecusa</MudText>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
+
+    @if (proposta.Historico.Count > 0)
+    {
+        <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Histórico de negociação</MudText>
+            <MudTable Items="@proposta.Historico" Dense="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>Valor</MudTh>
+                    <MudTh>Origem</MudTh>
+                    <MudTh>Data</MudTh>
+                    <MudTh>Observação</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Valor">@context.Valor.ToString("C")</MudTd>
+                    <MudTd DataLabel="Origem">@context.Origem</MudTd>
+                    <MudTd DataLabel="Data">@context.DataHora.ToLocalTime().ToString("g")</MudTd>
+                    <MudTd DataLabel="Observação">@context.Observacao</MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudPaper>
+    }
+
+    @if (proposta.Status is StatusProposta.EmAnalise or StatusProposta.ContraProposta)
+    {
+        <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Ações</MudText>
+
+            <MudGrid Class="mb-3">
+                <MudItem xs="12" md="3">
+                    <MudNumericField T="decimal" @bind-Value="novoValor" Label="Novo valor" Format="N2" Adornment="Adornment.Start" AdornmentText="R$" />
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudSelect T="OrigemNegociacao" @bind-Value="origem" Label="Origem">
+                        @foreach (var origemValor in Enum.GetValues<OrigemNegociacao>())
+                        {
+                            <MudSelectItem T="OrigemNegociacao" Value="@origemValor">@origemValor</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudTextField T="string" @bind-Value="observacao" Label="Observação (opcional)" />
+                </MudItem>
+                <MudItem xs="12" md="2" Class="d-flex align-center">
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="RegistrarContraproposta">Contraproposta</MudButton>
+                </MudItem>
+            </MudGrid>
+
+            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" Class="mb-3">
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success" OnClick="Aceitar">Aceitar</MudButton>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="Recusar">Recusar</MudButton>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="Cancelar">Cancelar</MudButton>
+            </MudStack>
+
+            <MudTextField T="string" @bind-Value="motivoRecusa" Label="Motivo da recusa (usado no botão Recusar)" />
+        </MudPaper>
+    }
+
+    @if (proposta.Status == StatusProposta.Aceita && proposta.ImovelId is not null)
+    {
+        <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Fechamento de venda</MudText>
+            <MudGrid Class="mb-3">
+                <MudItem xs="12" md="3">
+                    <MudDatePicker Label="Data da venda" @bind-Date="dataVenda" />
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudSelect T="FormaPagamento" @bind-Value="formaPagamentoVenda" Label="Forma de pagamento">
+                        @foreach (var forma in Enum.GetValues<FormaPagamento>())
+                        {
+                            <MudSelectItem T="FormaPagamento" Value="@forma">@forma</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                @if (formaPagamentoVenda == FormaPagamento.FinanciamentoBancario)
+                {
+                    <MudItem xs="12" md="3">
+                        <MudTextField T="string" @bind-Value="bancoFinanciamento" Label="Banco" />
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudNumericField T="decimal" @bind-Value="valorFinanciado" Label="Valor financiado" Format="N2" Adornment="Adornment.Start" AdornmentText="R$" />
+                    </MudItem>
+                }
+            </MudGrid>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="FecharVenda">Fechar Venda</MudButton>
+        </MudPaper>
+    }
+
+    <MudButton Variant="Variant.Text" Href="/propostas">Voltar</MudButton>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private PropostaDetalheDto? proposta;
+    private string? erro;
+    private decimal novoValor;
+    private OrigemNegociacao origem = OrigemNegociacao.Cliente;
+    private string? observacao;
+    private string? motivoRecusa;
+    private DateTime? dataVenda = DateTime.Today;
+    private FormaPagamento formaPagamentoVenda = FormaPagamento.AVista;
+    private string? bancoFinanciamento;
+    private decimal valorFinanciado;
+
+    protected override async Task OnInitializedAsync() => await Carregar();
+
+    private async Task Carregar()
+    {
+        var resultado = await ObterHandler.HandleAsync(new ObterPropostaPorIdQuery(Id));
+        proposta = resultado.Value;
+        if (proposta is not null)
+            novoValor = proposta.ValorProposto;
+    }
+
+    private async Task RegistrarContraproposta()
+    {
+        var resultado = await ContrapropostaHandler.HandleAsync(new RegistrarContrapropostaCommand(Id, novoValor, origem, observacao));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        observacao = null;
+        await Carregar();
+    }
+
+    private async Task Aceitar()
+    {
+        var resultado = await AceitarHandler.HandleAsync(new AceitarPropostaCommand(Id));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+
+    private async Task Recusar()
+    {
+        var resultado = await RecusarHandler.HandleAsync(new RecusarPropostaCommand(Id, motivoRecusa ?? string.Empty));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        motivoRecusa = null;
+        await Carregar();
+    }
+
+    private async Task Cancelar()
+    {
+        var resultado = await CancelarHandler.HandleAsync(new CancelarPropostaCommand(Id));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+
+    private async Task FecharVenda()
+    {
+        var data = DateOnly.FromDateTime(dataVenda ?? DateTime.Today);
+        var comando = new FecharVendaCommand(Id, data, formaPagamentoVenda, bancoFinanciamento, valorFinanciado);
+        var resultado = await FecharVendaHandler.HandleAsync(comando);
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        Navigation.NavigateTo($"/vendas/{resultado.Value}");
+    }
+}

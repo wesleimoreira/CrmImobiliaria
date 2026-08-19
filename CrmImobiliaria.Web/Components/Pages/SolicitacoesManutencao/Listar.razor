@@ -1,0 +1,54 @@
+@page "/solicitacoes-manutencao"
+@inject IQueryHandler<ListarSolicitacoesManutencaoQuery, List<SolicitacaoManutencaoListaItemDto>> ListarHandler
+
+<PageTitle>Solicitações de Manutenção</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Solicitações de Manutenção</MudText>
+
+<div class="d-flex justify-end mb-4">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Href="/solicitacoes-manutencao/nova">
+        Abrir Solicitação
+    </MudButton>
+</div>
+
+<MudTable Items="@solicitacoes" Hover="true" Loading="@(solicitacoes is null)" Elevation="0" Outlined="true">
+    <HeaderContent>
+        <MudTh>Imóvel</MudTh>
+        <MudTh>Solicitante</MudTh>
+        <MudTh>Descrição</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Imóvel">@context.ImovelEndereco</MudTd>
+        <MudTd DataLabel="Solicitante">@context.SolicitanteNome</MudTd>
+        <MudTd DataLabel="Descrição">@context.Descricao</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@CorPorStatus(context.Status)">@context.Status</MudChip>
+        </MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Href="@($"/solicitacoes-manutencao/{context.Id}")" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>Nenhuma solicitação aberta.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<SolicitacaoManutencaoListaItemDto>? solicitacoes;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultado = await ListarHandler.HandleAsync(new ListarSolicitacoesManutencaoQuery());
+        solicitacoes = resultado.Value;
+    }
+
+    private static Color CorPorStatus(StatusSolicitacaoManutencao status) => status switch
+    {
+        StatusSolicitacaoManutencao.Concluida => Color.Success,
+        StatusSolicitacaoManutencao.Cancelada => Color.Error,
+        StatusSolicitacaoManutencao.Aprovada or StatusSolicitacaoManutencao.EmExecucao => Color.Info,
+        _ => Color.Default
+    };
+}

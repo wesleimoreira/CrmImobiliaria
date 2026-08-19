@@ -1,0 +1,22 @@
+<MudItem xs="12" sm="6" md="4" lg="3">
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudIcon Icon="@Icone" Color="Color.Primary" Size="Size.Large" />
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.caption">@Titulo</MudText>
+                <MudText Typo="Typo.h5">@Valor</MudText>
+            </MudStack>
+        </MudStack>
+        @if (Href is not null)
+        {
+            <MudButton Variant="Variant.Text" Size="Size.Small" Href="@Href" Class="mt-2">Ver mais</MudButton>
+        }
+    </MudPaper>
+</MudItem>
+
+@code {
+    [Parameter] public string Titulo { get; set; } = "";
+    [Parameter] public string Valor { get; set; } = "";
+    [Parameter] public string Icone { get; set; } = "";
+    [Parameter] public string? Href { get; set; }
+}

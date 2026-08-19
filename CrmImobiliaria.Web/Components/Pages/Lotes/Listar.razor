@@ -1,0 +1,82 @@
+@page "/lotes"
+@inject IQueryHandler<ListarLotesQuery, List<LoteListaItemDto>> ListarHandler
+@inject IQueryHandler<ListarEmpreendimentosQuery, List<EmpreendimentoListaItemDto>> ListarEmpreendimentosHandler
+
+<PageTitle>Lotes</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Lotes</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" sm="8">
+            <MudSelect T="Guid?" @bind-Value="empreendimentoId" Label="Empreendimento" Clearable="true" @bind-Value:after="Carregar">
+                @if (empreendimentos is not null)
+                {
+                    @foreach (var emp in empreendimentos)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)emp.Id)">@emp.Nome</MudSelectItem>
+                    }
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4" Class="d-flex justify-end align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Href="/lotes/novo">
+                Novo Lote
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudTable Items="@lotes" Hover="true" Loading="@(lotes is null)" Elevation="0" Outlined="true">
+    <HeaderContent>
+        <MudTh>Empreendimento</MudTh>
+        <MudTh>Quadra</MudTh>
+        <MudTh>Número</MudTh>
+        <MudTh>Área</MudTh>
+        <MudTh>Valor vigente</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Empreendimento">@context.EmpreendimentoNome</MudTd>
+        <MudTd DataLabel="Quadra">@context.Quadra</MudTd>
+        <MudTd DataLabel="Número">@context.Numero</MudTd>
+        <MudTd DataLabel="Área">@context.AreaM2.ToString("0.##") m²</MudTd>
+        <MudTd DataLabel="Valor vigente">@context.ValorVigente.ToString("C")</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@CorPorStatus(context.Status)">@context.Status</MudChip>
+        </MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Href="@($"/lotes/{context.Id}")" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>Nenhum lote cadastrado.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<LoteListaItemDto>? lotes;
+    private List<EmpreendimentoListaItemDto>? empreendimentos;
+    private Guid? empreendimentoId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        empreendimentos = (await ListarEmpreendimentosHandler.HandleAsync(new ListarEmpreendimentosQuery())).Value;
+        await Carregar();
+    }
+
+    private async Task Carregar()
+    {
+        var resultado = await ListarHandler.HandleAsync(new ListarLotesQuery(empreendimentoId));
+        lotes = resultado.Value;
+    }
+
+    private static Color CorPorStatus(StatusLote status) => status switch
+    {
+        StatusLote.Vendido => Color.Success,
+        StatusLote.Bloqueado or StatusLote.Distrato => Color.Error,
+        StatusLote.Reservado or StatusLote.EmProposta => Color.Info,
+        _ => Color.Default
+    };
+}

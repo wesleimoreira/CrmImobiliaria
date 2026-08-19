@@ -1,0 +1,194 @@
+@page "/solicitacoes-manutencao/{Id:guid}"
+@inject IQueryHandler<ObterSolicitacaoManutencaoPorIdQuery, SolicitacaoManutencaoDetalheDto?> ObterHandler
+@inject ICommandHandler<AdicionarOrcamentoCommand, Guid> AdicionarOrcamentoHandler
+@inject ICommandHandler<AprovarOrcamentoCommand, bool> AprovarOrcamentoHandler
+@inject ICommandHandler<IniciarExecucaoSolicitacaoCommand, bool> IniciarExecucaoHandler
+@inject ICommandHandler<ConcluirServicoCommand, bool> ConcluirServicoHandler
+@inject ICommandHandler<CancelarSolicitacaoCommand, bool> CancelarHandler
+@inject IQueryHandler<ListarPrestadoresQuery, List<PrestadorListaItemDto>> ListarPrestadoresHandler
+
+<PageTitle>Solicitação de Manutenção</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Solicitação de Manutenção</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (solicitacao is null || prestadores is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.caption">Imóvel</MudText>
+                <MudText Typo="Typo.body1">@solicitacao.ImovelEndereco</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Solicitante</MudText>
+                <MudText Typo="Typo.body1">@solicitacao.SolicitanteNome</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Status</MudText>
+                <div><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@solicitacao.Status</MudChip></div>
+            </MudItem>
+            <MudItem xs="12">
+                <MudText Typo="Typo.caption">Descrição</MudText>
+                <MudText Typo="Typo.body1">@solicitacao.Descricao</MudText>
+            </MudItem>
+            @if (solicitacao.DataConclusao is not null)
+            {
+                <MudItem xs="12" md="3">
+                    <MudText Typo="Typo.caption">Data de conclusão</MudText>
+                    <MudText Typo="Typo.body1">@solicitacao.DataConclusao?.ToString("g")</MudText>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
+
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Orçamentos</MudText>
+        <MudTable Items="@solicitacao.Orcamentos" Dense="true" Elevation="0" Class="mb-3">
+            <HeaderContent>
+                <MudTh>Prestador</MudTh>
+                <MudTh>Valor</MudTh>
+                <MudTh>Descrição</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Prestador">@context.PrestadorNome</MudTd>
+                <MudTd DataLabel="Valor">@context.Valor.ToString("C")</MudTd>
+                <MudTd DataLabel="Descrição">@context.Descricao</MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(context.Status == StatusOrcamento.Aprovado ? Color.Success : context.Status == StatusOrcamento.Reprovado ? Color.Error : Color.Default)">@context.Status</MudChip>
+                </MudTd>
+                <MudTd>
+                    @if (solicitacao.Status == StatusSolicitacaoManutencao.EmOrcamento && context.Status == StatusOrcamento.Pendente)
+                    {
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success" OnClick="@(() => AprovarOrcamento(context.Id))">Aprovar</MudButton>
+                    }
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText>Nenhum orçamento lançado.</MudText>
+            </NoRecordsContent>
+        </MudTable>
+
+        @if (solicitacao.Status is StatusSolicitacaoManutencao.Aberta or StatusSolicitacaoManutencao.EmOrcamento)
+        {
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudSelect T="Guid?" @bind-Value="prestadorId" Label="Prestador">
+                        @foreach (var prestador in prestadores)
+                        {
+                            <MudSelectItem T="Guid?" Value="@((Guid?)prestador.Id)">@prestador.Nome</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudNumericField T="decimal" @bind-Value="valorOrcamento" Label="Valor" Format="N2" Adornment="Adornment.Start" AdornmentText="R$" />
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudTextField T="string" @bind-Value="descricaoOrcamento" Label="Descrição" />
+                </MudItem>
+                <MudItem xs="12" md="2" Class="d-flex align-center">
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="AdicionarOrcamento">Adicionar orçamento</MudButton>
+                </MudItem>
+            </MudGrid>
+        }
+    </MudPaper>
+
+    @if (solicitacao.Status is not (StatusSolicitacaoManutencao.Concluida or StatusSolicitacaoManutencao.Cancelada))
+    {
+        <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Ações</MudText>
+            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2">
+                @if (solicitacao.Status == StatusSolicitacaoManutencao.Aprovada)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" OnClick="IniciarExecucao">Iniciar execução</MudButton>
+                }
+                @if (solicitacao.Status == StatusSolicitacaoManutencao.EmExecucao)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success" OnClick="ConcluirServico">Concluir serviço</MudButton>
+                }
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="CancelarSolicitacao">Cancelar solicitação</MudButton>
+            </MudStack>
+            <MudTextField T="string" @bind-Value="motivoCancelamento" Label="Motivo do cancelamento" Class="mt-3" />
+        </MudPaper>
+    }
+
+    <MudButton Variant="Variant.Text" Href="/solicitacoes-manutencao">Voltar</MudButton>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private SolicitacaoManutencaoDetalheDto? solicitacao;
+    private List<PrestadorListaItemDto>? prestadores;
+    private string? erro;
+
+    private Guid? prestadorId;
+    private decimal valorOrcamento;
+    private string? descricaoOrcamento;
+    private string? motivoCancelamento;
+
+    protected override async Task OnInitializedAsync()
+    {
+        prestadores = (await ListarPrestadoresHandler.HandleAsync(new ListarPrestadoresQuery())).Value;
+        await Carregar();
+    }
+
+    private async Task Carregar()
+    {
+        var resultado = await ObterHandler.HandleAsync(new ObterSolicitacaoManutencaoPorIdQuery(Id));
+        solicitacao = resultado.Value;
+    }
+
+    private async Task AdicionarOrcamento()
+    {
+        var resultado = await AdicionarOrcamentoHandler.HandleAsync(new AdicionarOrcamentoCommand(Id, prestadorId ?? Guid.Empty, valorOrcamento, descricaoOrcamento));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        prestadorId = null;
+        valorOrcamento = 0;
+        descricaoOrcamento = null;
+        await Carregar();
+    }
+
+    private async Task AprovarOrcamento(Guid orcamentoId)
+    {
+        var resultado = await AprovarOrcamentoHandler.HandleAsync(new AprovarOrcamentoCommand(Id, orcamentoId));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+
+    private async Task IniciarExecucao()
+    {
+        var resultado = await IniciarExecucaoHandler.HandleAsync(new IniciarExecucaoSolicitacaoCommand(Id));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+
+    private async Task ConcluirServico()
+    {
+        var resultado = await ConcluirServicoHandler.HandleAsync(new ConcluirServicoCommand(Id, DateTime.Now));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+
+    private async Task CancelarSolicitacao()
+    {
+        var resultado = await CancelarHandler.HandleAsync(new CancelarSolicitacaoCommand(Id, motivoCancelamento));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+}

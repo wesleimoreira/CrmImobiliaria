@@ -1,0 +1,101 @@
+@page "/usuarios/novo"
+@attribute [Authorize(Roles = Papeis.Administrador)]
+@using CrmImobiliaria.Infrastructure.Identity
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@inject IQueryHandler<ListarCorretoresQuery, List<CorretorResumoDto>> ListarCorretoresHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Novo Usuário</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Novo Usuário</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (corretores is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="nomeCompleto" Label="Nome completo" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="email" Label="E-mail" Required="true" InputType="InputType.Email" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="senha" Label="Senha" Required="true" InputType="InputType.Password"
+                             HelperText="Mínimo de 8 caracteres." />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="string" @bind-Value="papel" Label="Papel" Required="true">
+                    @foreach (var p in Papeis.Todos)
+                    {
+                        <MudSelectItem T="string" Value="@p">@p</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            @if (papel == Papeis.Corretor)
+            {
+                <MudItem xs="12" md="6">
+                    <MudSelect T="Guid?" @bind-Value="corretorId" Label="Vincular ao corretor (opcional)" Clearable="true">
+                        @foreach (var corretor in corretores)
+                        {
+                            <MudSelectItem T="Guid?" Value="@((Guid?)corretor.Id)">@corretor.Nome</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            }
+        </MudGrid>
+
+        <MudStack Row="true" Class="mt-4" Spacing="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SalvarAsync">Salvar</MudButton>
+            <MudButton Variant="Variant.Text" Href="/usuarios">Cancelar</MudButton>
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    private List<CorretorResumoDto>? corretores;
+    private string? erro;
+
+    private string nomeCompleto = "";
+    private string email = "";
+    private string senha = "";
+    private string papel = Papeis.Corretor;
+    private Guid? corretorId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        corretores = (await ListarCorretoresHandler.HandleAsync(new ListarCorretoresQuery())).Value;
+    }
+
+    private async Task SalvarAsync()
+    {
+        var usuario = new ApplicationUser
+        {
+            UserName = email,
+            Email = email,
+            NomeCompleto = nomeCompleto,
+            EmailConfirmed = true,
+            Ativo = true,
+            CorretorId = papel == Papeis.Corretor ? corretorId : null,
+        };
+
+        var resultado = await UserManager.CreateAsync(usuario, senha);
+        if (!resultado.Succeeded)
+        {
+            erro = string.Join(" ", resultado.Errors.Select(e => e.Description));
+            return;
+        }
+
+        await UserManager.AddToRoleAsync(usuario, papel);
+        Navigation.NavigateTo("/usuarios");
+    }
+}

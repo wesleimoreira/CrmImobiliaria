@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="CrmImobiliaria.Application/CrmImobiliaria.Application.csproj" />
+    <Project Path="CrmImobiliaria.Domain/CrmImobiliaria.Domain.csproj" />
+    <Project Path="CrmImobiliaria.Infrastructure/CrmImobiliaria.Infrastructure.csproj" />
+    <Project Path="CrmImobiliaria.Shared/CrmImobiliaria.Shared.csproj" />
+    <Project Path="CrmImobiliaria.Web/CrmImobiliaria.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CrmImobiliaria.Domain.Tests/CrmImobiliaria.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

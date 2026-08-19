@@ -1,0 +1,68 @@
+@page "/usuarios"
+@attribute [Authorize(Roles = Papeis.Administrador)]
+@using CrmImobiliaria.Infrastructure.Identity
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>Usuários</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Usuários</MudText>
+
+<MudStack Row="true" Justify="Justify.FlexEnd" Class="mb-4">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Href="/usuarios/novo">
+        Novo Usuário
+    </MudButton>
+</MudStack>
+
+<MudTable Items="@usuarios" Hover="true" Loading="@(usuarios is null)" Elevation="0" Outlined="true">
+    <HeaderContent>
+        <MudTh>Nome</MudTh>
+        <MudTh>E-mail</MudTh>
+        <MudTh>Papel</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Nome">@context.Usuario.NomeCompleto</MudTd>
+        <MudTd DataLabel="E-mail">@context.Usuario.Email</MudTd>
+        <MudTd DataLabel="Papel">@string.Join(", ", context.Papeis)</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(context.Usuario.Ativo ? Color.Success : Color.Error)">
+                @(context.Usuario.Ativo ? "Ativo" : "Inativo")
+            </MudChip>
+        </MudTd>
+        <MudTd>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined"
+                       Color="@(context.Usuario.Ativo ? Color.Error : Color.Success)"
+                       OnClick="@(() => AlternarAtivoAsync(context.Usuario))">
+                @(context.Usuario.Ativo ? "Desativar" : "Ativar")
+            </MudButton>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>Nenhum usuário cadastrado.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<(ApplicationUser Usuario, IList<string> Papeis)>? usuarios;
+
+    protected override async Task OnInitializedAsync() => await CarregarAsync();
+
+    private async Task CarregarAsync()
+    {
+        var lista = UserManager.Users.OrderBy(u => u.NomeCompleto).ToList();
+        var itens = new List<(ApplicationUser, IList<string>)>();
+        foreach (var usuario in lista)
+            itens.Add((usuario, await UserManager.GetRolesAsync(usuario)));
+
+        usuarios = itens;
+    }
+
+    private async Task AlternarAtivoAsync(ApplicationUser usuario)
+    {
+        usuario.Ativo = !usuario.Ativo;
+        await UserManager.UpdateAsync(usuario);
+        await CarregarAsync();
+    }
+}

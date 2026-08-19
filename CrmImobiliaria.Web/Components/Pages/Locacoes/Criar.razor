@@ -1,0 +1,126 @@
+@page "/locacoes/nova"
+@inject ICommandHandler<IniciarLocacaoCommand, Guid> IniciarHandler
+@inject IQueryHandler<ListarClientesQuery, List<ClienteListaItemDto>> ListarClientesHandler
+@inject IQueryHandler<ListarImoveisQuery, List<ImovelListaItemDto>> ListarImoveisHandler
+@inject IQueryHandler<ObterImovelPorIdQuery, ImovelDetalheDto?> ObterImovelHandler
+@inject IQueryHandler<ListarCorretoresQuery, List<CorretorResumoDto>> ListarCorretoresHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Nova Locação</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Nova Locação</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (clientes is null || imoveis is null || corretores is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="proprietarioId" Label="Proprietário" Required="true">
+                    @foreach (var cliente in clientes)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)cliente.Id)">@cliente.Nome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="locatarioId" Label="Locatário" Required="true">
+                    @foreach (var cliente in clientes)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)cliente.Id)">@cliente.Nome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="corretorId" Label="Corretor" Required="true">
+                    @foreach (var corretor in corretores)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)corretor.Id)">@corretor.Nome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="imovelId" Label="Imóvel" Required="true" @bind-Value:after="OnImovelAlterado">
+                    @foreach (var imovel in imoveis)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)imovel.Id)">@imovel.Endereco</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="anuncioId" Label="Anúncio de locação" Required="true" Disabled="@(anuncios is null || anuncios.Count == 0)">
+                    @if (anuncios is not null)
+                    {
+                        @foreach (var anuncio in anuncios)
+                        {
+                            <MudSelectItem T="Guid?" Value="@((Guid?)anuncio.Id)">@anuncio.Codigo — @anuncio.Valor.ToString("C")</MudSelectItem>
+                        }
+                    }
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+
+        <MudStack Row="true" Class="mt-4" Spacing="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Salvar">Salvar</MudButton>
+            <MudButton Variant="Variant.Text" Href="/locacoes">Cancelar</MudButton>
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    private List<ClienteListaItemDto>? clientes;
+    private List<ImovelListaItemDto>? imoveis;
+    private List<CorretorResumoDto>? corretores;
+    private List<AnuncioResumoDto>? anuncios;
+    private string? erro;
+
+    private Guid? proprietarioId;
+    private Guid? locatarioId;
+    private Guid? imovelId;
+    private Guid? anuncioId;
+    private Guid? corretorId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        clientes = (await ListarClientesHandler.HandleAsync(new ListarClientesQuery(null))).Value;
+        imoveis = (await ListarImoveisHandler.HandleAsync(new ListarImoveisQuery(null))).Value;
+        corretores = (await ListarCorretoresHandler.HandleAsync(new ListarCorretoresQuery())).Value;
+    }
+
+    private async Task OnImovelAlterado()
+    {
+        anuncioId = null;
+        anuncios = null;
+
+        if (imovelId is { } id)
+        {
+            var resultado = await ObterImovelHandler.HandleAsync(new ObterImovelPorIdQuery(id));
+            anuncios = resultado.Value?.Anuncios.Where(a => a.Tipo == TipoNegociacaoImovel.Locacao).ToList();
+        }
+    }
+
+    private async Task Salvar()
+    {
+        var comando = new IniciarLocacaoCommand(
+            proprietarioId ?? Guid.Empty, locatarioId ?? Guid.Empty, imovelId ?? Guid.Empty, anuncioId ?? Guid.Empty,
+            corretorId ?? Guid.Empty, null);
+
+        var resultado = await IniciarHandler.HandleAsync(comando);
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        Navigation.NavigateTo($"/locacoes/{resultado.Value}");
+    }
+}

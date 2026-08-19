@@ -1,0 +1,40 @@
+@page "/regras-comissao"
+@inject IQueryHandler<ListarRegrasComissaoQuery, List<RegraComissaoListaItemDto>> ListarHandler
+
+<PageTitle>Regras de Comissão</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Regras de Comissão</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Href="/regras-comissao/nova">
+        Nova Regra
+    </MudButton>
+</MudPaper>
+
+<MudTable Items="@regras" Hover="true" Loading="@(regras is null)" Elevation="0" Outlined="true">
+    <HeaderContent>
+        <MudTh>Nome</MudTh>
+        <MudTh>% Comissão total</MudTh>
+        <MudTh>Imóvel vinculado</MudTh>
+        <MudTh>Itens de rateio</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Nome">@context.Nome</MudTd>
+        <MudTd DataLabel="% Comissão total">@context.PercentualComissaoTotal.ToString("0.##")%</MudTd>
+        <MudTd DataLabel="Imóvel vinculado">@(context.ImovelEndereco ?? "—")</MudTd>
+        <MudTd DataLabel="Itens de rateio">@context.QuantidadeItensRateio</MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>Nenhuma regra de comissão cadastrada.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<RegraComissaoListaItemDto>? regras;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultado = await ListarHandler.HandleAsync(new ListarRegrasComissaoQuery());
+        regras = resultado.Value;
+    }
+}

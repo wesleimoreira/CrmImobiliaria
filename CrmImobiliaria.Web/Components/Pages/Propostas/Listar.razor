@@ -1,0 +1,70 @@
+@page "/propostas"
+@inject IQueryHandler<ListarPropostasQuery, List<PropostaListaItemDto>> ListarHandler
+
+<PageTitle>Propostas</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Propostas</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" sm="6">
+            <MudTextField T="string" @bind-Value="termo" Label="Buscar por cliente" Adornment="Adornment.Start"
+                         AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true"
+                         DebounceInterval="300" OnDebounceIntervalElapsed="OnTermoAlterado" />
+        </MudItem>
+        <MudItem xs="12" sm="6" Class="d-flex justify-end">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Href="/propostas/nova">
+                Nova Proposta
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudTable Items="@propostas" Hover="true" Loading="@(propostas is null)" Elevation="0" Outlined="true">
+    <HeaderContent>
+        <MudTh>Cliente</MudTh>
+        <MudTh>Imóvel</MudTh>
+        <MudTh>Valor proposto</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Criado em</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Cliente">@context.ClienteNome</MudTd>
+        <MudTd DataLabel="Imóvel">@context.ImovelEndereco</MudTd>
+        <MudTd DataLabel="Valor proposto">@context.ValorProposto.ToString("C")</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@CorPorStatus(context.Status)">@context.Status</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Criado em">@context.CriadoEm.ToLocalTime().ToString("g")</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Href="@($"/propostas/{context.Id}")" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>Nenhuma proposta cadastrada.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<PropostaListaItemDto>? propostas;
+    private string? termo;
+
+    protected override async Task OnInitializedAsync() => await Buscar();
+
+    private async Task OnTermoAlterado(string valor) => await Buscar();
+
+    private async Task Buscar()
+    {
+        var resultado = await ListarHandler.HandleAsync(new ListarPropostasQuery(termo));
+        propostas = resultado.Value;
+    }
+
+    private static Color CorPorStatus(StatusProposta status) => status switch
+    {
+        StatusProposta.Aceita => Color.Success,
+        StatusProposta.ContraProposta => Color.Info,
+        StatusProposta.Recusada or StatusProposta.Cancelada => Color.Error,
+        _ => Color.Default
+    };
+}

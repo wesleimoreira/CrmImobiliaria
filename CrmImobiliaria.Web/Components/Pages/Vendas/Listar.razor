@@ -1,0 +1,53 @@
+@page "/vendas"
+@inject IQueryHandler<ListarVendasQuery, List<VendaListaItemDto>> ListarHandler
+
+<PageTitle>Vendas</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Vendas</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+    <MudTextField T="string" @bind-Value="termo" Label="Buscar por cliente" Adornment="Adornment.Start"
+                 AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true"
+                 DebounceInterval="300" OnDebounceIntervalElapsed="OnTermoAlterado" />
+</MudPaper>
+
+<MudTable Items="@vendas" Hover="true" Loading="@(vendas is null)" Elevation="0" Outlined="true">
+    <HeaderContent>
+        <MudTh>Cliente</MudTh>
+        <MudTh>Imóvel</MudTh>
+        <MudTh>Valor final</MudTh>
+        <MudTh>Data da venda</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Cliente">@context.ClienteNome</MudTd>
+        <MudTd DataLabel="Imóvel">@context.ImovelEndereco</MudTd>
+        <MudTd DataLabel="Valor final">@context.ValorFinal.ToString("C")</MudTd>
+        <MudTd DataLabel="Data da venda">@context.DataVenda.ToString("d")</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(context.Status == StatusVenda.Distratada ? Color.Error : Color.Success)">@context.Status</MudChip>
+        </MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Href="@($"/vendas/{context.Id}")" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>Nenhuma venda registrada.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<VendaListaItemDto>? vendas;
+    private string? termo;
+
+    protected override async Task OnInitializedAsync() => await Buscar();
+
+    private async Task OnTermoAlterado(string valor) => await Buscar();
+
+    private async Task Buscar()
+    {
+        var resultado = await ListarHandler.HandleAsync(new ListarVendasQuery(termo));
+        vendas = resultado.Value;
+    }
+}

@@ -1,0 +1,60 @@
+@page "/imoveis"
+@inject IQueryHandler<ListarImoveisQuery, List<ImovelListaItemDto>> ListarHandler
+
+<PageTitle>Imóveis</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Imóveis</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" sm="6">
+            <MudTextField T="string" @bind-Value="termo" Label="Buscar por cidade ou bairro" Adornment="Adornment.Start"
+                         AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true"
+                         DebounceInterval="300" OnDebounceIntervalElapsed="OnTermoAlterado" />
+        </MudItem>
+        <MudItem xs="12" sm="6" Class="d-flex justify-end">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Href="/imoveis/novo">
+                Novo Imóvel
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudTable Items="@imoveis" Hover="true" Loading="@(imoveis is null)" Elevation="0" Outlined="true">
+    <HeaderContent>
+        <MudTh>Endereço</MudTh>
+        <MudTh>Tipo</MudTh>
+        <MudTh>Proprietário</MudTh>
+        <MudTh>Corretor captador</MudTh>
+        <MudTh>Anúncios</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Endereço">@context.Endereco</MudTd>
+        <MudTd DataLabel="Tipo">@context.Tipo</MudTd>
+        <MudTd DataLabel="Proprietário">@context.ProprietarioNome</MudTd>
+        <MudTd DataLabel="Corretor captador">@context.CorretorNome</MudTd>
+        <MudTd DataLabel="Anúncios">@context.QtdAnuncios</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Href="@($"/imoveis/{context.Id}")" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>Nenhum imóvel cadastrado.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<ImovelListaItemDto>? imoveis;
+    private string? termo;
+
+    protected override async Task OnInitializedAsync() => await Buscar();
+
+    private async Task OnTermoAlterado(string valor) => await Buscar();
+
+    private async Task Buscar()
+    {
+        var resultado = await ListarHandler.HandleAsync(new ListarImoveisQuery(termo));
+        imoveis = resultado.Value;
+    }
+}

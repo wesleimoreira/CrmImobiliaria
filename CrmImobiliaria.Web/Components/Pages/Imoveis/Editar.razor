@@ -1,0 +1,280 @@
+@page "/imoveis/{Id:guid}"
+@inject IQueryHandler<ObterImovelPorIdQuery, ImovelDetalheDto?> ObterHandler
+@inject IQueryHandler<ListarCorretoresQuery, List<CorretorResumoDto>> ListarCorretoresHandler
+@inject ICommandHandler<AtualizarImovelCommand, bool> AtualizarHandler
+@inject ICommandHandler<AdicionarAnuncioCommand, Guid> AdicionarAnuncioHandler
+@inject ICommandHandler<AlterarStatusAnuncioCommand, bool> AlterarStatusAnuncioHandler
+
+<PageTitle>Editar Imóvel</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Editar Imóvel</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (imovel is null || corretores is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Tipo</MudText>
+                <MudText Typo="Typo.body1">@imovel.Tipo</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Área</MudText>
+                <MudText Typo="Typo.body1">@imovel.AreaM2 m²</MudText>
+            </MudItem>
+        </MudGrid>
+
+        <MudGrid Class="mt-2">
+            <MudItem xs="12" md="4">
+                <MudSelect T="Guid?" @bind-Value="modelo.CorretorCaptadorId" Label="Corretor captador" Required="true">
+                    @foreach (var corretor in corretores)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)corretor.Id)">@corretor.Nome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="8">
+                <MudTextField T="string" @bind-Value="modelo.Logradouro" Label="Logradouro" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField T="string" @bind-Value="modelo.Numero" Label="Número" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField T="string" @bind-Value="modelo.Complemento" Label="Complemento" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField T="string" @bind-Value="modelo.Bairro" Label="Bairro" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField T="string" @bind-Value="modelo.Cidade" Label="Cidade" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="2">
+                <MudTextField T="string" @bind-Value="modelo.Uf" Label="UF" MaxLength="2" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="modelo.Cep" Label="CEP" Required="true" />
+            </MudItem>
+            <MudItem xs="6" md="4">
+                <MudNumericField T="int" @bind-Value="modelo.Quartos" Label="Quartos" Min="0" />
+            </MudItem>
+            <MudItem xs="6" md="4">
+                <MudNumericField T="int" @bind-Value="modelo.Suites" Label="Suítes" Min="0" />
+            </MudItem>
+            <MudItem xs="6" md="4">
+                <MudNumericField T="int" @bind-Value="modelo.Garagem" Label="Vagas de garagem" Min="0" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField T="string" @bind-Value="modelo.CaracteristicasTexto" Label="Características (separadas por vírgula)"
+                             HelperText="Ex: piscina, churrasqueira, portaria 24h" />
+            </MudItem>
+        </MudGrid>
+
+        <MudStack Row="true" Class="mt-4" Spacing="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Salvar">Salvar</MudButton>
+            <MudButton Variant="Variant.Text" Href="/imoveis">Voltar</MudButton>
+        </MudStack>
+    </MudPaper>
+
+    <MudText Typo="Typo.h5" Class="mb-2">Anúncios</MudText>
+
+    <MudTable Items="@imovel.Anuncios" Hover="true" Elevation="0" Outlined="true" Class="mb-4">
+        <HeaderContent>
+            <MudTh>Código</MudTh>
+            <MudTh>Tipo</MudTh>
+            <MudTh>Valor</MudTh>
+            <MudTh>Exclusividade</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh></MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Código">@context.Codigo</MudTd>
+            <MudTd DataLabel="Tipo">@context.Tipo</MudTd>
+            <MudTd DataLabel="Valor">@context.Valor.ToString("C2")</MudTd>
+            <MudTd DataLabel="Exclusividade">@(context.Exclusividade ? "Sim" : "Não")</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@CorPorStatus(context.Status)">@context.Status</MudChip>
+            </MudTd>
+            <MudTd>
+                @foreach (var (acao, rotulo) in AcoesDisponiveis(context.Status))
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="mr-1 mb-1" OnClick="@(() => ExecutarAcao(context.Id, acao))">@rotulo</MudButton>
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>Nenhum anúncio cadastrado ainda.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Novo anúncio</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="3">
+                <MudSelect T="TipoNegociacaoImovel" @bind-Value="novoAnuncio.Tipo" Label="Tipo">
+                    @foreach (var tipo in Enum.GetValues<TipoNegociacaoImovel>())
+                    {
+                        <MudSelectItem T="TipoNegociacaoImovel" Value="@tipo">@tipo</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudNumericField T="decimal" @bind-Value="novoAnuncio.Valor" Label="Valor" Min="0.01m" />
+            </MudItem>
+            @if (novoAnuncio.Tipo == TipoNegociacaoImovel.Temporada)
+            {
+                <MudItem xs="12" md="3">
+                    <MudNumericField T="int?" @bind-Value="novoAnuncio.EstadiaMinimaNoites" Label="Estadia mínima (noites)" Min="1" />
+                </MudItem>
+            }
+            <MudItem xs="12" md="3" Class="d-flex align-center">
+                <MudCheckBox T="bool" @bind-Value="novoAnuncio.Exclusividade" Label="Exclusividade" />
+            </MudItem>
+        </MudGrid>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-2" OnClick="AdicionarAnuncio">Adicionar anúncio</MudButton>
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private ImovelDetalheDto? imovel;
+    private List<CorretorResumoDto>? corretores;
+    private string? erro;
+    private readonly ModeloImovel modelo = new();
+    private readonly ModeloAnuncio novoAnuncio = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarImovel();
+
+        var resultadoCorretores = await ListarCorretoresHandler.HandleAsync(new ListarCorretoresQuery());
+        corretores = resultadoCorretores.Value;
+    }
+
+    private async Task CarregarImovel()
+    {
+        var resultado = await ObterHandler.HandleAsync(new ObterImovelPorIdQuery(Id));
+        imovel = resultado.Value;
+
+        if (imovel is not null)
+        {
+            modelo.CorretorCaptadorId = imovel.CorretorCaptadorId;
+            modelo.Logradouro = imovel.Logradouro;
+            modelo.Numero = imovel.Numero;
+            modelo.Complemento = imovel.Complemento;
+            modelo.Bairro = imovel.Bairro;
+            modelo.Cidade = imovel.Cidade;
+            modelo.Uf = imovel.Uf;
+            modelo.Cep = imovel.Cep;
+            modelo.Quartos = imovel.Quartos;
+            modelo.Suites = imovel.Suites;
+            modelo.Garagem = imovel.Garagem;
+            modelo.CaracteristicasTexto = string.Join(", ", imovel.Caracteristicas);
+        }
+    }
+
+    private async Task Salvar()
+    {
+        var caracteristicas = modelo.CaracteristicasTexto
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+
+        var comando = new AtualizarImovelCommand(
+            Id, modelo.CorretorCaptadorId ?? Guid.Empty, modelo.Logradouro, modelo.Numero, modelo.Complemento,
+            modelo.Bairro, modelo.Cidade, modelo.Uf, modelo.Cep, modelo.Quartos, modelo.Suites, modelo.Garagem, caracteristicas);
+
+        var resultado = await AtualizarHandler.HandleAsync(comando);
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        erro = null;
+        await CarregarImovel();
+    }
+
+    private async Task AdicionarAnuncio()
+    {
+        var comando = new AdicionarAnuncioCommand(Id, novoAnuncio.Tipo, novoAnuncio.Valor, novoAnuncio.Exclusividade, novoAnuncio.EstadiaMinimaNoites);
+        var resultado = await AdicionarAnuncioHandler.HandleAsync(comando);
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        erro = null;
+        novoAnuncio.Valor = 0;
+        await CarregarImovel();
+    }
+
+    private async Task ExecutarAcao(Guid anuncioId, AcaoAnuncio acao)
+    {
+        var resultado = await AlterarStatusAnuncioHandler.HandleAsync(new AlterarStatusAnuncioCommand(Id, anuncioId, acao));
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        erro = null;
+        await CarregarImovel();
+    }
+
+    private static Color CorPorStatus(StatusAnuncio status) => status switch
+    {
+        StatusAnuncio.Disponivel => Color.Success,
+        StatusAnuncio.Vendido or StatusAnuncio.Alugado => Color.Info,
+        StatusAnuncio.Suspenso => Color.Default,
+        StatusAnuncio.Reservado or StatusAnuncio.EmNegociacao => Color.Warning,
+        _ => Color.Default
+    };
+
+    private static List<(AcaoAnuncio Acao, string Rotulo)> AcoesDisponiveis(StatusAnuncio status) => status switch
+    {
+        StatusAnuncio.EmCaptacao => [(AcaoAnuncio.Disponibilizar, "Disponibilizar")],
+        StatusAnuncio.Disponivel => [(AcaoAnuncio.Reservar, "Reservar"), (AcaoAnuncio.Suspender, "Suspender")],
+        StatusAnuncio.Reservado => [(AcaoAnuncio.IniciarNegociacao, "Iniciar negociação"), (AcaoAnuncio.CancelarNegociacao, "Cancelar reserva")],
+        StatusAnuncio.EmNegociacao => [(AcaoAnuncio.CancelarNegociacao, "Cancelar negociação")],
+        StatusAnuncio.Suspenso => [(AcaoAnuncio.Disponibilizar, "Disponibilizar")],
+        StatusAnuncio.Vendido => [(AcaoAnuncio.Reabrir, "Reabrir")],
+        StatusAnuncio.Alugado => [(AcaoAnuncio.Reabrir, "Reabrir")],
+        _ => []
+    };
+
+    private sealed class ModeloImovel
+    {
+        public Guid? CorretorCaptadorId { get; set; }
+        public string Logradouro { get; set; } = "";
+        public string Numero { get; set; } = "";
+        public string? Complemento { get; set; }
+        public string Bairro { get; set; } = "";
+        public string Cidade { get; set; } = "";
+        public string Uf { get; set; } = "";
+        public string Cep { get; set; } = "";
+        public int Quartos { get; set; }
+        public int Suites { get; set; }
+        public int Garagem { get; set; }
+        public string CaracteristicasTexto { get; set; } = "";
+    }
+
+    private sealed class ModeloAnuncio
+    {
+        public TipoNegociacaoImovel Tipo { get; set; } = TipoNegociacaoImovel.Venda;
+        public decimal Valor { get; set; }
+        public bool Exclusividade { get; set; }
+        public int? EstadiaMinimaNoites { get; set; } = 1;
+    }
+}

@@ -1,0 +1,44 @@
+@page "/repasses"
+@inject IQueryHandler<ListarRepassesQuery, List<RepasseListaItemDto>> ListarHandler
+
+<PageTitle>Repasses</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Repasses</MudText>
+
+<MudTable Items="@repasses" Hover="true" Loading="@(repasses is null)" Elevation="0" Outlined="true">
+    <HeaderContent>
+        <MudTh>Imóvel</MudTh>
+        <MudTh>Proprietário</MudTh>
+        <MudTh>Competência</MudTh>
+        <MudTh>Aluguel recebido</MudTh>
+        <MudTh>Valor líquido</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Imóvel">@context.Imovel</MudTd>
+        <MudTd DataLabel="Proprietário">@context.Proprietario</MudTd>
+        <MudTd DataLabel="Competência">@context.Mes.ToString("D2")/@context.Ano</MudTd>
+        <MudTd DataLabel="Aluguel recebido">@context.ValorAluguelRecebido.ToString("C")</MudTd>
+        <MudTd DataLabel="Valor líquido">@context.ValorLiquido.ToString("C")</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(context.Status == StatusRepasse.Realizado ? Color.Success : Color.Warning)">@context.Status</MudChip>
+        </MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Href="@($"/repasses/{context.Id}")" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>Nenhum repasse gerado.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<RepasseListaItemDto>? repasses;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultado = await ListarHandler.HandleAsync(new ListarRepassesQuery());
+        repasses = resultado.Value;
+    }
+}

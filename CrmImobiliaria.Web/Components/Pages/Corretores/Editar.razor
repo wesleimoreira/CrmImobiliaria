@@ -1,0 +1,149 @@
+@page "/corretores/{Id:guid}"
+@inject IQueryHandler<ObterCorretorPorIdQuery, CorretorDetalheDto?> ObterHandler
+@inject IQueryHandler<ListarCorretoresQuery, List<CorretorResumoDto>> ListarCorretoresHandler
+@inject ICommandHandler<AtualizarCorretorCommand, bool> AtualizarHandler
+@inject ICommandHandler<AlterarStatusCorretorCommand, bool> AlterarStatusHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Editar Corretor</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Editar Corretor</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (corretor is null || outrosCorretores is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudText Typo="Typo.caption">Nome</MudText>
+                <MudText Typo="Typo.body1">@corretor.Nome</MudText>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudText Typo="Typo.caption">CRECI</MudText>
+                <MudText Typo="Typo.body1">@corretor.Creci</MudText>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudText Typo="Typo.caption">Status</MudText>
+                <div>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                             Color="@(corretor.Status == StatusCorretor.Ativo ? Color.Success : corretor.Status == StatusCorretor.Suspenso ? Color.Warning : Color.Default)">
+                        @corretor.Status
+                    </MudChip>
+                </div>
+            </MudItem>
+        </MudGrid>
+
+        <MudStack Row="true" Class="mt-3" Spacing="2">
+            @if (corretor.Status != StatusCorretor.Ativo)
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success" OnClick="@(() => AlterarStatus(StatusCorretor.Ativo))">Reativar</MudButton>
+            }
+            @if (corretor.Status != StatusCorretor.Suspenso)
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning" OnClick="@(() => AlterarStatus(StatusCorretor.Suspenso))">Suspender</MudButton>
+            }
+            @if (corretor.Status != StatusCorretor.Inativo)
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="@(() => AlterarStatus(StatusCorretor.Inativo))">Inativar</MudButton>
+            }
+        </MudStack>
+    </MudPaper>
+
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="modelo.Telefone" Label="Telefone" Required="true" InputType="InputType.Telephone"
+                             @bind-Value:after="@(() => modelo.Telefone = Mascaras.FormatarTelefone(modelo.Telefone)!)" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="modelo.Email" Label="E-mail" Required="true" InputType="InputType.Email" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="modelo.Equipe" Label="Equipe" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="modelo.GerenteId" Label="Gerente responsável" Clearable="true">
+                    @foreach (var outro in outrosCorretores)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)outro.Id)">@outro.Nome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+
+        <MudStack Row="true" Class="mt-4" Spacing="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Salvar">Salvar</MudButton>
+            <MudButton Variant="Variant.Text" Href="/corretores">Cancelar</MudButton>
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private CorretorDetalheDto? corretor;
+    private List<CorretorResumoDto>? outrosCorretores;
+    private string? erro;
+    private readonly ModeloCorretor modelo = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultadoCorretor = await ObterHandler.HandleAsync(new ObterCorretorPorIdQuery(Id));
+        corretor = resultadoCorretor.Value;
+
+        if (corretor is not null)
+        {
+            modelo.Telefone = corretor.Telefone;
+            modelo.Email = corretor.Email;
+            modelo.Equipe = corretor.Equipe;
+            modelo.GerenteId = corretor.GerenteId;
+        }
+
+        var resultadoLista = await ListarCorretoresHandler.HandleAsync(new ListarCorretoresQuery());
+        outrosCorretores = resultadoLista.Value?.Where(c => c.Id != Id).ToList();
+    }
+
+    private async Task Salvar()
+    {
+        var comando = new AtualizarCorretorCommand(Id, modelo.Telefone, modelo.Email, modelo.Equipe, modelo.GerenteId);
+        var resultado = await AtualizarHandler.HandleAsync(comando);
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        Navigation.NavigateTo("/corretores");
+    }
+
+    private async Task AlterarStatus(StatusCorretor novoStatus)
+    {
+        var resultado = await AlterarStatusHandler.HandleAsync(new AlterarStatusCorretorCommand(Id, novoStatus));
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        var resultadoCorretor = await ObterHandler.HandleAsync(new ObterCorretorPorIdQuery(Id));
+        corretor = resultadoCorretor.Value;
+    }
+
+    private sealed class ModeloCorretor
+    {
+        public string Telefone { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string? Equipe { get; set; }
+        public Guid? GerenteId { get; set; }
+    }
+}

@@ -1,0 +1,97 @@
+@page "/empreendimentos/novo"
+@inject ICommandHandler<CriarEmpreendimentoCommand, Guid> CriarHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Novo Empreendimento</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Novo Empreendimento</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+<MudPaper Class="pa-4" Elevation="0" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudTextField T="string" @bind-Value="modelo.Nome" Label="Nome" Required="true" />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudTextField T="string" @bind-Value="modelo.LoteadoraIncorporadora" Label="Loteadora/Incorporadora" Required="true" />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudTextField T="string" @bind-Value="modelo.Logradouro" Label="Logradouro" Required="true" />
+        </MudItem>
+        <MudItem xs="12" md="3">
+            <MudTextField T="string" @bind-Value="modelo.Numero" Label="Número" Required="true" />
+        </MudItem>
+        <MudItem xs="12" md="3">
+            <MudTextField T="string" @bind-Value="modelo.Complemento" Label="Complemento" />
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudTextField T="string" @bind-Value="modelo.Bairro" Label="Bairro" Required="true" />
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudTextField T="string" @bind-Value="modelo.Cidade" Label="Cidade" Required="true" />
+        </MudItem>
+        <MudItem xs="12" md="2">
+            <MudTextField T="string" @bind-Value="modelo.Uf" Label="UF" MaxLength="2" Required="true" />
+        </MudItem>
+        <MudItem xs="12" md="2">
+            <MudTextField T="string" @bind-Value="modelo.Cep" Label="CEP" Required="true" />
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudNumericField T="int" @bind-Value="modelo.TotalLotes" Label="Total de lotes" Min="1" />
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudNumericField T="int" @bind-Value="modelo.NumeroQuadras" Label="Número de quadras" Min="1" />
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudNumericField T="decimal" @bind-Value="modelo.PercentualComissao" Label="% Comissão" Format="0.##" Adornment="Adornment.End" AdornmentText="%" />
+        </MudItem>
+    </MudGrid>
+
+    <MudStack Row="true" Class="mt-4" Spacing="2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Salvar">Salvar</MudButton>
+        <MudButton Variant="Variant.Text" Href="/empreendimentos">Cancelar</MudButton>
+    </MudStack>
+</MudPaper>
+
+@code {
+    private string? erro;
+    private readonly ModeloEmpreendimento modelo = new();
+
+    private async Task Salvar()
+    {
+        var comando = new CriarEmpreendimentoCommand(
+            modelo.Nome, modelo.LoteadoraIncorporadora, modelo.Logradouro, modelo.Numero, modelo.Complemento,
+            modelo.Bairro, modelo.Cidade, modelo.Uf, modelo.Cep, modelo.TotalLotes, modelo.NumeroQuadras,
+            modelo.PercentualComissao, null);
+
+        var resultado = await CriarHandler.HandleAsync(comando);
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        Navigation.NavigateTo("/empreendimentos");
+    }
+
+    private sealed class ModeloEmpreendimento
+    {
+        public string Nome { get; set; } = "";
+        public string LoteadoraIncorporadora { get; set; } = "";
+        public string Logradouro { get; set; } = "";
+        public string Numero { get; set; } = "";
+        public string? Complemento { get; set; }
+        public string Bairro { get; set; } = "";
+        public string Cidade { get; set; } = "";
+        public string Uf { get; set; } = "";
+        public string Cep { get; set; } = "";
+        public int TotalLotes { get; set; } = 1;
+        public int NumeroQuadras { get; set; } = 1;
+        public decimal PercentualComissao { get; set; } = 6;
+    }
+}

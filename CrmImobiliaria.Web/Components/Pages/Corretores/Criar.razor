@@ -1,0 +1,81 @@
+@page "/corretores/novo"
+@inject ICommandHandler<CriarCorretorCommand, Guid> CriarHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Novo Corretor</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Novo Corretor</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+<MudPaper Class="pa-4" Elevation="0" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12">
+            <MudTextField T="string" @bind-Value="modelo.Nome" Label="Nome" Required="true" />
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudTextField T="string" @bind-Value="modelo.CreciNumero" Label="Número do CRECI" Required="true" />
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudSelect T="TipoCreci" @bind-Value="modelo.CreciTipo" Label="Tipo">
+                @foreach (var tipo in Enum.GetValues<TipoCreci>())
+                {
+                    <MudSelectItem T="TipoCreci" Value="@tipo">@tipo</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudTextField T="string" @bind-Value="modelo.CreciUf" Label="UF" MaxLength="2" Required="true" />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudTextField T="string" @bind-Value="modelo.Telefone" Label="Telefone" Required="true" InputType="InputType.Telephone"
+                         @bind-Value:after="@(() => modelo.Telefone = Mascaras.FormatarTelefone(modelo.Telefone)!)" />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudTextField T="string" @bind-Value="modelo.Email" Label="E-mail" Required="true" InputType="InputType.Email" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudTextField T="string" @bind-Value="modelo.Equipe" Label="Equipe" />
+        </MudItem>
+    </MudGrid>
+
+    <MudStack Row="true" Class="mt-4" Spacing="2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Salvar">Salvar</MudButton>
+        <MudButton Variant="Variant.Text" Href="/corretores">Cancelar</MudButton>
+    </MudStack>
+</MudPaper>
+
+@code {
+    private string? erro;
+    private readonly ModeloCorretor modelo = new();
+
+    private async Task Salvar()
+    {
+        var comando = new CriarCorretorCommand(
+            modelo.Nome, modelo.CreciNumero, modelo.CreciTipo, modelo.CreciUf, modelo.Telefone, modelo.Email, modelo.Equipe);
+
+        var resultado = await CriarHandler.HandleAsync(comando);
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        Navigation.NavigateTo("/corretores");
+    }
+
+    private sealed class ModeloCorretor
+    {
+        public string Nome { get; set; } = "";
+        public string CreciNumero { get; set; } = "";
+        public TipoCreci CreciTipo { get; set; } = TipoCreci.PessoaFisica;
+        public string CreciUf { get; set; } = "";
+        public string Telefone { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string? Equipe { get; set; }
+    }
+}

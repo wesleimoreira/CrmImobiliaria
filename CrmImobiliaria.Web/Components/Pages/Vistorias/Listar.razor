@@ -1,0 +1,51 @@
+@page "/vistorias"
+@inject IQueryHandler<ListarVistoriasQuery, List<VistoriaListaItemDto>> ListarHandler
+
+<PageTitle>Vistorias</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Vistorias</MudText>
+
+<div class="d-flex justify-end mb-4">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Href="/vistorias/nova">
+        Agendar Vistoria
+    </MudButton>
+</div>
+
+<MudTable Items="@vistorias" Hover="true" Loading="@(vistorias is null)" Elevation="0" Outlined="true">
+    <HeaderContent>
+        <MudTh>Imóvel</MudTh>
+        <MudTh>Tipo</MudTh>
+        <MudTh>Responsável</MudTh>
+        <MudTh>Data agendada</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Imóvel">@context.ImovelEndereco</MudTd>
+        <MudTd DataLabel="Tipo">@context.Tipo</MudTd>
+        <MudTd DataLabel="Responsável">@context.ResponsavelNome</MudTd>
+        <MudTd DataLabel="Data agendada">@context.DataAgendada.ToString("g")</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                     Color="@(context.Status == StatusVistoria.Realizada ? Color.Success : context.Status == StatusVistoria.Cancelada ? Color.Error : Color.Default)">
+                @context.Status
+            </MudChip>
+        </MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Href="@($"/vistorias/{context.Id}")" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>Nenhuma vistoria agendada.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<VistoriaListaItemDto>? vistorias;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultado = await ListarHandler.HandleAsync(new ListarVistoriasQuery());
+        vistorias = resultado.Value;
+    }
+}

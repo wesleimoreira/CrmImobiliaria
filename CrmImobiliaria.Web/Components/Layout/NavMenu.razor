@@ -1,0 +1,39 @@
+@using CrmImobiliaria.Infrastructure.Identity
+
+<MudNavMenu>
+    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Início</MudNavLink>
+    <MudNavGroup Title="Cadastros" Icon="@Icons.Material.Filled.Folder" Expanded="true">
+        <MudNavLink Href="clientes" Icon="@Icons.Material.Filled.People">Clientes</MudNavLink>
+        <MudNavLink Href="corretores" Icon="@Icons.Material.Filled.Badge">Corretores</MudNavLink>
+        <MudNavLink Href="imoveis" Icon="@Icons.Material.Filled.House">Imóveis</MudNavLink>
+    </MudNavGroup>
+    <MudNavGroup Title="Comercial" Icon="@Icons.Material.Filled.TrendingUp" Expanded="true">
+        <MudNavLink Href="leads" Icon="@Icons.Material.Filled.FilterAlt">Funil de Atendimento</MudNavLink>
+        <MudNavLink Href="visitas" Icon="@Icons.Material.Filled.EventAvailable">Visitas</MudNavLink>
+        <MudNavLink Href="propostas" Icon="@Icons.Material.Filled.RequestQuote">Propostas</MudNavLink>
+        <MudNavLink Href="vendas" Icon="@Icons.Material.Filled.Sell">Vendas</MudNavLink>
+        <MudNavLink Href="comissoes" Icon="@Icons.Material.Filled.Percent">Comissões</MudNavLink>
+        <MudNavLink Href="regras-comissao" Icon="@Icons.Material.Filled.Rule">Regras de Comissão</MudNavLink>
+    </MudNavGroup>
+    <MudNavGroup Title="Locação" Icon="@Icons.Material.Filled.VpnKey" Expanded="true">
+        <MudNavLink Href="locacoes" Icon="@Icons.Material.Filled.Key">Locações</MudNavLink>
+        <MudNavLink Href="repasses" Icon="@Icons.Material.Filled.AccountBalanceWallet">Repasses</MudNavLink>
+    </MudNavGroup>
+    <MudNavGroup Title="Manutenção" Icon="@Icons.Material.Filled.Build" Expanded="true">
+        <MudNavLink Href="vistorias" Icon="@Icons.Material.Filled.FactCheck">Vistorias</MudNavLink>
+        <MudNavLink Href="solicitacoes-manutencao" Icon="@Icons.Material.Filled.Handyman">Manutenções</MudNavLink>
+        <MudNavLink Href="prestadores" Icon="@Icons.Material.Filled.Engineering">Prestadores</MudNavLink>
+    </MudNavGroup>
+    <MudNavGroup Title="Loteamentos" Icon="@Icons.Material.Filled.Terrain" Expanded="true">
+        <MudNavLink Href="empreendimentos" Icon="@Icons.Material.Filled.Business">Empreendimentos</MudNavLink>
+        <MudNavLink Href="lotes" Icon="@Icons.Material.Filled.GridView">Lotes</MudNavLink>
+        <MudNavLink Href="espelho-vendas" Icon="@Icons.Material.Filled.TableChart">Espelho de Vendas</MudNavLink>
+        <MudNavLink Href="simulador-lote" Icon="@Icons.Material.Filled.Calculate">Simulador de Lote</MudNavLink>
+        <MudNavLink Href="reservas-lote" Icon="@Icons.Material.Filled.EventAvailable">Reservas de Lote</MudNavLink>
+    </MudNavGroup>
+    <AuthorizeView Roles="@Papeis.Administrador">
+        <MudNavGroup Title="Administração" Icon="@Icons.Material.Filled.AdminPanelSettings" Expanded="true">
+            <MudNavLink Href="usuarios" Icon="@Icons.Material.Filled.ManageAccounts">Usuários</MudNavLink>
+        </MudNavGroup>
+    </AuthorizeView>
+</MudNavMenu>

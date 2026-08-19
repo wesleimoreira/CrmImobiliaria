@@ -1,0 +1,131 @@
+@page "/lotes/{Id:guid}"
+@inject IQueryHandler<ObterLotePorIdQuery, LoteDetalheDto?> ObterHandler
+@inject ICommandHandler<AvancarStatusLoteCommand, bool> AvancarStatusHandler
+
+<PageTitle>Lote</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Lote</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (lote is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.caption">Empreendimento</MudText>
+                <MudText Typo="Typo.body1">@lote.EmpreendimentoNome</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Quadra</MudText>
+                <MudText Typo="Typo.body1">@lote.Quadra</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Número</MudText>
+                <MudText Typo="Typo.body1">@lote.Numero</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Área</MudText>
+                <MudText Typo="Typo.body1">@lote.AreaM2.ToString("0.##") m²</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Valor</MudText>
+                <MudText Typo="Typo.body1">@lote.Valor.ToString("C")</MudText>
+            </MudItem>
+            @if (lote.ValorPromocional is not null)
+            {
+                <MudItem xs="12" md="3">
+                    <MudText Typo="Typo.caption">Valor promocional</MudText>
+                    <MudText Typo="Typo.body1">@lote.ValorPromocional?.ToString("C")</MudText>
+                </MudItem>
+            }
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Entrada mínima</MudText>
+                <MudText Typo="Typo.body1">@lote.EntradaMinima.ToString("C")</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Parcelamento máximo</MudText>
+                <MudText Typo="Typo.body1">@lote.ParcelamentoMaximo meses</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Status</MudText>
+                <div><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@lote.Status</MudChip></div>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Ações</MudText>
+        <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" Class="mb-3">
+            @if (lote.Status == StatusLote.Disponivel)
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" OnClick="Reservar">Reservar</MudButton>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning" OnClick="Bloquear">Bloquear</MudButton>
+            }
+            @if (lote.Status == StatusLote.Reservado)
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" OnClick="IniciarProposta">Iniciar proposta</MudButton>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="LiberarReserva">Liberar reserva</MudButton>
+            }
+            @if (lote.Status == StatusLote.EmProposta)
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success" OnClick="Vender">Vender</MudButton>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="LiberarReserva">Liberar reserva</MudButton>
+            }
+            @if (lote.Status == StatusLote.Vendido)
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="Distratar">Distratar</MudButton>
+            }
+            @if (lote.Status == StatusLote.Bloqueado)
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" OnClick="Desbloquear">Desbloquear</MudButton>
+            }
+        </MudStack>
+
+        @if (lote.Status == StatusLote.Vendido)
+        {
+            <MudTextField T="string" @bind-Value="motivo" Label="Motivo do distrato" />
+        }
+    </MudPaper>
+
+    <MudButton Variant="Variant.Text" Href="/lotes">Voltar</MudButton>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private LoteDetalheDto? lote;
+    private string? erro;
+    private string? motivo;
+
+    protected override async Task OnInitializedAsync() => await Carregar();
+
+    private async Task Carregar()
+    {
+        var resultado = await ObterHandler.HandleAsync(new ObterLotePorIdQuery(Id));
+        lote = resultado.Value;
+    }
+
+    private async Task ExecutarAcao(AcaoLote acao)
+    {
+        var resultado = await AvancarStatusHandler.HandleAsync(new AvancarStatusLoteCommand(Id, acao, motivo));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+
+    private Task Reservar() => ExecutarAcao(AcaoLote.Reservar);
+    private Task IniciarProposta() => ExecutarAcao(AcaoLote.IniciarProposta);
+    private Task Vender() => ExecutarAcao(AcaoLote.Vender);
+    private Task LiberarReserva() => ExecutarAcao(AcaoLote.LiberarReserva);
+    private Task Distratar() => ExecutarAcao(AcaoLote.Distratar);
+    private Task Bloquear() => ExecutarAcao(AcaoLote.Bloquear);
+    private Task Desbloquear() => ExecutarAcao(AcaoLote.Desbloquear);
+}

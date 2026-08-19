@@ -1,0 +1,50 @@
+@page "/"
+@inject IQueryHandler<ObterDashboardQuery, DashboardDto> ObterHandler
+
+<PageTitle>CRM Imobiliária</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-2">Painel</MudText>
+<MudText Typo="Typo.body1" Class="mb-6">Visão geral do CRM imobiliário.</MudText>
+
+@if (dashboard is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudText Typo="Typo.subtitle1" Class="mb-2">Comercial</MudText>
+    <MudGrid Class="mb-6">
+        <Cartao Titulo="Clientes" Valor="@dashboard.TotalClientes.ToString()" Icone="@Icons.Material.Filled.People" Href="/clientes" />
+        <Cartao Titulo="Imóveis disponíveis" Valor="@dashboard.ImoveisDisponiveis.ToString()" Icone="@Icons.Material.Filled.Home" Href="/imoveis" />
+        <Cartao Titulo="Leads em andamento" Valor="@dashboard.LeadsEmAndamento.ToString()" Icone="@Icons.Material.Filled.TrendingUp" Href="/leads" />
+        <Cartao Titulo="Propostas em análise" Valor="@dashboard.PropostasEmAnalise.ToString()" Icone="@Icons.Material.Filled.Description" Href="/propostas" />
+        <Cartao Titulo="Vendas no mês" Valor="@dashboard.VendasNoMes.ToString()" Icone="@Icons.Material.Filled.Sell" Href="/vendas" />
+        <Cartao Titulo="Valor vendido no mês" Valor="@dashboard.ValorVendasNoMes.ToString("C")" Icone="@Icons.Material.Filled.Paid" Href="/vendas" />
+    </MudGrid>
+
+    <MudText Typo="Typo.subtitle1" Class="mb-2">Locação</MudText>
+    <MudGrid Class="mb-6">
+        <Cartao Titulo="Locações ativas" Valor="@dashboard.LocacoesAtivas.ToString()" Icone="@Icons.Material.Filled.VpnKey" Href="/locacoes" />
+        <Cartao Titulo="Comissões a receber" Valor="@dashboard.ComissoesAReceber.ToString("C")" Icone="@Icons.Material.Filled.AccountBalanceWallet" Href="/comissoes" />
+        <Cartao Titulo="Repasses pendentes" Valor="@dashboard.RepassesPendentes.ToString()" Icone="@Icons.Material.Filled.Payments" Href="/repasses" />
+        <Cartao Titulo="Vistorias agendadas" Valor="@dashboard.VistoriasAgendadas.ToString()" Icone="@Icons.Material.Filled.FactCheck" Href="/vistorias" />
+        <Cartao Titulo="Manutenções abertas" Valor="@dashboard.SolicitacoesManutencaoAbertas.ToString()" Icone="@Icons.Material.Filled.Handyman" Href="/solicitacoes-manutencao" />
+    </MudGrid>
+
+    <MudText Typo="Typo.subtitle1" Class="mb-2">Loteamentos</MudText>
+    <MudGrid>
+        <Cartao Titulo="Lotes disponíveis" Valor="@dashboard.LotesDisponiveis.ToString()" Icone="@Icons.Material.Filled.GridView" Href="/lotes" />
+        <Cartao Titulo="Lotes vendidos" Valor="@dashboard.LotesVendidos.ToString()" Icone="@Icons.Material.Filled.CheckCircle" Href="/lotes" />
+        <Cartao Titulo="Reservas ativas" Valor="@dashboard.ReservasLoteAtivas.ToString()" Icone="@Icons.Material.Filled.EventAvailable" Href="/reservas-lote" />
+    </MudGrid>
+}
+
+@code {
+    private DashboardDto? dashboard;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultado = await ObterHandler.HandleAsync(new ObterDashboardQuery());
+        dashboard = resultado.Value;
+    }
+}

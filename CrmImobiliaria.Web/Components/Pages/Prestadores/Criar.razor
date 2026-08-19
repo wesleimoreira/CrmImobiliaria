@@ -1,0 +1,62 @@
+@page "/prestadores/novo"
+@inject ICommandHandler<CriarPrestadorCommand, Guid> CriarHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Novo Prestador</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Novo Prestador</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+<MudPaper Class="pa-4" Elevation="0" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12">
+            <MudTextField T="string" @bind-Value="modelo.Nome" Label="Nome" Required="true" />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudTextField T="string" @bind-Value="modelo.Telefone" Label="Telefone" Required="true" InputType="InputType.Telephone"
+                         @bind-Value:after="@(() => modelo.Telefone = Mascaras.FormatarTelefone(modelo.Telefone)!)" />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudTextField T="string" @bind-Value="modelo.Email" Label="E-mail" InputType="InputType.Email" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudTextField T="string" @bind-Value="modelo.Especialidade" Label="Especialidade" />
+        </MudItem>
+    </MudGrid>
+
+    <MudStack Row="true" Class="mt-4" Spacing="2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Salvar">Salvar</MudButton>
+        <MudButton Variant="Variant.Text" Href="/prestadores">Cancelar</MudButton>
+    </MudStack>
+</MudPaper>
+
+@code {
+    private string? erro;
+    private readonly ModeloPrestador modelo = new();
+
+    private async Task Salvar()
+    {
+        var comando = new CriarPrestadorCommand(modelo.Nome, modelo.Telefone, modelo.Email, modelo.Especialidade);
+        var resultado = await CriarHandler.HandleAsync(comando);
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        Navigation.NavigateTo("/prestadores");
+    }
+
+    private sealed class ModeloPrestador
+    {
+        public string Nome { get; set; } = "";
+        public string Telefone { get; set; } = "";
+        public string? Email { get; set; }
+        public string? Especialidade { get; set; }
+    }
+}

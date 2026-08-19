@@ -1,0 +1,218 @@
+@page "/vendas/{Id:guid}"
+@inject IQueryHandler<ObterVendaPorIdQuery, VendaDetalheDto?> ObterHandler
+@inject ICommandHandler<AnexarContratoVendaCommand, bool> AnexarContratoHandler
+@inject ICommandHandler<AtualizarSituacaoDocumentalCommand, bool> AtualizarSituacaoHandler
+@inject ICommandHandler<DistratarVendaCommand, bool> DistratarHandler
+@inject ICommandHandler<GerarComissaoCommand, Guid> GerarComissaoHandler
+@inject IQueryHandler<ListarRegrasComissaoQuery, List<RegraComissaoListaItemDto>> ListarRegrasComissaoHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Venda</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Venda</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (venda is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Cliente</MudText>
+                <MudText Typo="Typo.body1">@venda.ClienteNome</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Imóvel</MudText>
+                <MudText Typo="Typo.body1">@venda.ImovelEndereco</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Corretor</MudText>
+                <MudText Typo="Typo.body1">@venda.CorretorNome</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Status</MudText>
+                <div><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(venda.Status == StatusVenda.Distratada ? Color.Error : Color.Success)">@venda.Status</MudChip></div>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Valor final</MudText>
+                <MudText Typo="Typo.body1">@venda.ValorFinal.ToString("C")</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Data da venda</MudText>
+                <MudText Typo="Typo.body1">@venda.DataVenda.ToString("d")</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Forma de pagamento</MudText>
+                <MudText Typo="Typo.body1">@venda.FormaPagamento</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Situação documental</MudText>
+                <div><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@venda.SituacaoDocumental</MudChip></div>
+            </MudItem>
+            @if (venda.BancoFinanciamento is not null)
+            {
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.caption">Financiamento</MudText>
+                    <MudText Typo="Typo.body1">@venda.BancoFinanciamento — @venda.ValorFinanciado?.ToString("C")</MudText>
+                </MudItem>
+            }
+            @if (venda.NumeroContrato is not null)
+            {
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.caption">Contrato</MudText>
+                    <MudText Typo="Typo.body1">@venda.NumeroContrato</MudText>
+                </MudItem>
+            }
+            @if (!string.IsNullOrWhiteSpace(venda.MotivoDistrato))
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.caption">Motivo do distrato</MudText>
+                    <MudText Typo="Typo.body1">@venda.MotivoDistrato</MudText>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
+
+    @if (venda.Status != StatusVenda.Distratada)
+    {
+        <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Situação documental</MudText>
+            <MudGrid Class="mb-3">
+                <MudItem xs="12" md="4">
+                    <MudSelect T="SituacaoDocumental" @bind-Value="novaSituacao" Label="Situação">
+                        @foreach (var situacao in Enum.GetValues<SituacaoDocumental>())
+                        {
+                            <MudSelectItem T="SituacaoDocumental" Value="@situacao">@situacao</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="2" Class="d-flex align-center">
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="AtualizarSituacao">Atualizar</MudButton>
+                </MudItem>
+            </MudGrid>
+
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Contrato</MudText>
+            <MudGrid Class="mb-3">
+                <MudItem xs="12" md="4">
+                    <MudTextField T="string" @bind-Value="numeroContrato" Label="Número do contrato" />
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudTextField T="string" @bind-Value="urlContrato" Label="URL do contrato (opcional)" />
+                </MudItem>
+                <MudItem xs="12" md="2" Class="d-flex align-center">
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="AnexarContrato">Anexar</MudButton>
+                </MudItem>
+            </MudGrid>
+
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Distrato</MudText>
+            <MudGrid>
+                <MudItem xs="12" md="8">
+                    <MudTextField T="string" @bind-Value="motivoDistrato" Label="Motivo do distrato" />
+                </MudItem>
+                <MudItem xs="12" md="2" Class="d-flex align-center">
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="Distratar">Distratar</MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    }
+
+    @if (venda.Status != StatusVenda.Distratada && regras is { Count: > 0 })
+    {
+        <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Comissão</MudText>
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudSelect T="Guid?" @bind-Value="regraComissaoId" Label="Regra de comissão">
+                        @foreach (var regra in regras)
+                        {
+                            <MudSelectItem T="Guid?" Value="@((Guid?)regra.Id)">@regra.Nome (@regra.PercentualComissaoTotal.ToString("0.##")%)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="3" Class="d-flex align-center">
+                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" OnClick="GerarComissao">Gerar Comissão</MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    }
+
+    <MudButton Variant="Variant.Text" Href="/vendas">Voltar</MudButton>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private VendaDetalheDto? venda;
+    private string? erro;
+    private SituacaoDocumental novaSituacao;
+    private string? numeroContrato;
+    private string? urlContrato;
+    private string? motivoDistrato;
+    private List<RegraComissaoListaItemDto>? regras;
+    private Guid? regraComissaoId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Carregar();
+        var resultado = await ListarRegrasComissaoHandler.HandleAsync(new ListarRegrasComissaoQuery());
+        regras = resultado.Value;
+    }
+
+    private async Task Carregar()
+    {
+        var resultado = await ObterHandler.HandleAsync(new ObterVendaPorIdQuery(Id));
+        venda = resultado.Value;
+        if (venda is not null)
+            novaSituacao = venda.SituacaoDocumental;
+    }
+
+    private async Task AtualizarSituacao()
+    {
+        var resultado = await AtualizarSituacaoHandler.HandleAsync(new AtualizarSituacaoDocumentalCommand(Id, novaSituacao));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+
+    private async Task AnexarContrato()
+    {
+        var resultado = await AnexarContratoHandler.HandleAsync(new AnexarContratoVendaCommand(Id, numeroContrato ?? string.Empty, urlContrato));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+
+    private async Task Distratar()
+    {
+        var resultado = await DistratarHandler.HandleAsync(new DistratarVendaCommand(Id, motivoDistrato ?? string.Empty));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        motivoDistrato = null;
+        await Carregar();
+    }
+
+    private async Task GerarComissao()
+    {
+        if (regraComissaoId is not { } regraId)
+        {
+            erro = "Selecione uma regra de comissão.";
+            return;
+        }
+
+        var resultado = await GerarComissaoHandler.HandleAsync(new GerarComissaoCommand(Id, regraId));
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        Navigation.NavigateTo($"/comissoes/{resultado.Value}");
+    }
+}

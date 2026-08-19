@@ -1,0 +1,96 @@
+@page "/vistorias/nova"
+@inject ICommandHandler<AgendarVistoriaCommand, Guid> AgendarHandler
+@inject IQueryHandler<ListarLocacoesQuery, List<LocacaoListaItemDto>> ListarLocacoesHandler
+@inject IQueryHandler<ListarCorretoresQuery, List<CorretorResumoDto>> ListarCorretoresHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Agendar Vistoria</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Agendar Vistoria</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (locacoes is null || corretores is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="locacaoId" Label="Locação" Required="true">
+                    @foreach (var locacao in locacoes)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)locacao.Id)">@locacao.ImovelEndereco — @locacao.LocatarioNome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="responsavelId" Label="Responsável" Required="true">
+                    @foreach (var corretor in corretores)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)corretor.Id)">@corretor.Nome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="TipoVistoria" @bind-Value="tipo" Label="Tipo">
+                    @foreach (var t in Enum.GetValues<TipoVistoria>())
+                    {
+                        <MudSelectItem T="TipoVistoria" Value="@t">@t</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="DateTime" @bind-Value="dataAgendada" Label="Data e hora" InputType="InputType.DateTimeLocal" Required="true" />
+            </MudItem>
+        </MudGrid>
+
+        <MudStack Row="true" Class="mt-4" Spacing="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Salvar">Salvar</MudButton>
+            <MudButton Variant="Variant.Text" Href="/vistorias">Cancelar</MudButton>
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    private List<LocacaoListaItemDto>? locacoes;
+    private List<CorretorResumoDto>? corretores;
+    private string? erro;
+
+    private Guid? locacaoId;
+    private Guid? responsavelId;
+    private TipoVistoria tipo = TipoVistoria.Entrada;
+    private DateTime dataAgendada = DateTime.Now.AddDays(1);
+
+    protected override async Task OnInitializedAsync()
+    {
+        locacoes = (await ListarLocacoesHandler.HandleAsync(new ListarLocacoesQuery(null))).Value;
+        corretores = (await ListarCorretoresHandler.HandleAsync(new ListarCorretoresQuery())).Value;
+    }
+
+    private async Task Salvar()
+    {
+        var locacao = locacoes?.FirstOrDefault(l => l.Id == locacaoId);
+        if (locacao is null)
+        {
+            erro = "Selecione uma locação.";
+            return;
+        }
+
+        var comando = new AgendarVistoriaCommand(locacao.Id, locacao.ImovelId, tipo, dataAgendada, responsavelId ?? Guid.Empty);
+        var resultado = await AgendarHandler.HandleAsync(comando);
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        Navigation.NavigateTo("/vistorias");
+    }
+}

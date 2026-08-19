@@ -1,0 +1,80 @@
+@page "/solicitacoes-manutencao/nova"
+@inject ICommandHandler<AbrirSolicitacaoManutencaoCommand, Guid> AbrirHandler
+@inject IQueryHandler<ListarImoveisQuery, List<ImovelListaItemDto>> ListarImoveisHandler
+@inject IQueryHandler<ListarClientesQuery, List<ClienteListaItemDto>> ListarClientesHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Abrir Solicitação de Manutenção</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Abrir Solicitação de Manutenção</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (imoveis is null || clientes is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="imovelId" Label="Imóvel" Required="true">
+                    @foreach (var imovel in imoveis)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)imovel.Id)">@imovel.Endereco</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="solicitanteId" Label="Solicitante" Required="true">
+                    @foreach (var cliente in clientes)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)cliente.Id)">@cliente.Nome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField T="string" @bind-Value="descricao" Label="Descrição" Lines="3" Required="true" />
+            </MudItem>
+        </MudGrid>
+
+        <MudStack Row="true" Class="mt-4" Spacing="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Salvar">Salvar</MudButton>
+            <MudButton Variant="Variant.Text" Href="/solicitacoes-manutencao">Cancelar</MudButton>
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    private List<ImovelListaItemDto>? imoveis;
+    private List<ClienteListaItemDto>? clientes;
+    private string? erro;
+
+    private Guid? imovelId;
+    private Guid? solicitanteId;
+    private string? descricao;
+
+    protected override async Task OnInitializedAsync()
+    {
+        imoveis = (await ListarImoveisHandler.HandleAsync(new ListarImoveisQuery(null))).Value;
+        clientes = (await ListarClientesHandler.HandleAsync(new ListarClientesQuery(null))).Value;
+    }
+
+    private async Task Salvar()
+    {
+        var comando = new AbrirSolicitacaoManutencaoCommand(imovelId ?? Guid.Empty, solicitanteId ?? Guid.Empty, descricao, null);
+        var resultado = await AbrirHandler.HandleAsync(comando);
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        Navigation.NavigateTo("/solicitacoes-manutencao");
+    }
+}

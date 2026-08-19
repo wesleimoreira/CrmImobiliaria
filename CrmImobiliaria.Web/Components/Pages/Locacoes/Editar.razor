@@ -1,0 +1,320 @@
+@page "/locacoes/{Id:guid}"
+@inject IQueryHandler<ObterLocacaoPorIdQuery, LocacaoDetalheDto?> ObterHandler
+@inject ICommandHandler<AvancarEstagioLocacaoCommand, bool> AvancarHandler
+@inject ICommandHandler<FormalizarContratoLocacaoCommand, bool> FormalizarHandler
+@inject ICommandHandler<GerarPagamentoAluguelCommand, Guid> GerarPagamentoHandler
+@inject ICommandHandler<RegistrarPagamentoAluguelCommand, bool> RegistrarPagamentoHandler
+@inject IQueryHandler<ListarPagamentosAluguelQuery, List<PagamentoAluguelItemDto>> ListarPagamentosHandler
+@inject ICommandHandler<GerarRepasseCommand, Guid> GerarRepasseHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Locação</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Locação</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (locacao is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Proprietário</MudText>
+                <MudText Typo="Typo.body1">@locacao.ProprietarioNome</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Locatário</MudText>
+                <MudText Typo="Typo.body1">@locacao.LocatarioNome</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Imóvel</MudText>
+                <MudText Typo="Typo.body1">@locacao.ImovelEndereco</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Corretor</MudText>
+                <MudText Typo="Typo.body1">@locacao.CorretorNome</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Estágio</MudText>
+                <div><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@locacao.EstagioAtual</MudChip></div>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Status</MudText>
+                <div><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@locacao.Status</MudChip></div>
+            </MudItem>
+            @if (locacao.ValorAluguel is not null)
+            {
+                <MudItem xs="12" md="3">
+                    <MudText Typo="Typo.caption">Aluguel</MudText>
+                    <MudText Typo="Typo.body1">@locacao.ValorAluguel?.ToString("C")</MudText>
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudText Typo="Typo.caption">Período</MudText>
+                    <MudText Typo="Typo.body1">@locacao.DataInicial?.ToString("d") a @locacao.DataFinal?.ToString("d")</MudText>
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudText Typo="Typo.caption">Dia de vencimento</MudText>
+                    <MudText Typo="Typo.body1">@locacao.DiaVencimento</MudText>
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudText Typo="Typo.caption">Garantia</MudText>
+                    <MudText Typo="Typo.body1">@locacao.Garantia?.ToString("C")</MudText>
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudText Typo="Typo.caption">Taxa de administração</MudText>
+                    <MudText Typo="Typo.body1">@locacao.TaxaAdministracao?.ToString("0.##")%</MudText>
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudText Typo="Typo.caption">Índice de reajuste</MudText>
+                    <MudText Typo="Typo.body1">@locacao.IndiceReajuste</MudText>
+                </MudItem>
+            }
+            @if (!string.IsNullOrWhiteSpace(locacao.MotivoReprovacaoOuCancelamento))
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.caption">Motivo</MudText>
+                    <MudText Typo="Typo.body1">@locacao.MotivoReprovacaoOuCancelamento</MudText>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
+
+    @if (locacao.Status == StatusLocacao.EmAndamento)
+    {
+        <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Ações</MudText>
+            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" Class="mb-3">
+                @if (locacao.EstagioAtual == EstagioLocacao.Lead)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="RegistrarVisita">Registrar visita</MudButton>
+                }
+                @if (locacao.EstagioAtual == EstagioLocacao.Visita)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="IniciarAnaliseCadastral">Iniciar análise cadastral</MudButton>
+                }
+                @if (locacao.EstagioAtual == EstagioLocacao.AnaliseCadastral)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success" OnClick="Aprovar">Aprovar</MudButton>
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="Reprovar">Reprovar</MudButton>
+                }
+                @if (locacao.EstagioAtual == EstagioLocacao.Contrato)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="RegistrarVistoriaEntrada">Registrar vistoria de entrada</MudButton>
+                }
+                @if (locacao.EstagioAtual == EstagioLocacao.Vistoria)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success" OnClick="EntregarChaves">Entregar chaves</MudButton>
+                }
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="Cancelar">Cancelar</MudButton>
+            </MudStack>
+
+            @if (locacao.EstagioAtual is EstagioLocacao.AnaliseCadastral or EstagioLocacao.Lead or EstagioLocacao.Visita)
+            {
+                <MudTextField T="string" @bind-Value="texto" Label="Motivo (usado em Reprovar/Cancelar)" />
+            }
+        </MudPaper>
+
+        @if (locacao.EstagioAtual == EstagioLocacao.Aprovacao)
+        {
+            <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Formalizar contrato</MudText>
+                <MudGrid>
+                    <MudItem xs="12" md="3">
+                        <MudNumericField T="decimal" @bind-Value="valorAluguel" Label="Valor do aluguel" Format="N2" Adornment="Adornment.Start" AdornmentText="R$" />
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudDatePicker Label="Data inicial" @bind-Date="dataInicial" />
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudDatePicker Label="Data final" @bind-Date="dataFinal" />
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudNumericField T="int" @bind-Value="diaVencimento" Label="Dia de vencimento" Min="1" Max="31" />
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudNumericField T="decimal" @bind-Value="garantia" Label="Garantia" Format="N2" Adornment="Adornment.Start" AdornmentText="R$" />
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudNumericField T="decimal" @bind-Value="taxaAdministracao" Label="Taxa de administração" Format="0.##" Adornment="Adornment.End" AdornmentText="%" />
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudSelect T="IndiceReajuste" @bind-Value="indiceReajuste" Label="Índice de reajuste">
+                            @foreach (var indice in Enum.GetValues<IndiceReajuste>())
+                            {
+                                <MudSelectItem T="IndiceReajuste" Value="@indice">@indice</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                </MudGrid>
+                <MudButton Class="mt-3" Variant="Variant.Filled" Color="Color.Primary" OnClick="FormalizarContrato">Formalizar Contrato</MudButton>
+            </MudPaper>
+        }
+    }
+
+    @if (locacao.Status == StatusLocacao.Ativa)
+    {
+        <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Ações</MudText>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="Encerrar">Encerrar locação</MudButton>
+            <MudTextField T="string" @bind-Value="texto" Label="Motivo do encerramento (opcional)" Class="mt-3" />
+        </MudPaper>
+
+        <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Pagamentos de aluguel</MudText>
+
+            @if (pagamentos is { Count: > 0 })
+            {
+                <MudTable Items="@pagamentos" Dense="true" Elevation="0" Class="mb-3">
+                    <HeaderContent>
+                        <MudTh>Competência</MudTh>
+                        <MudTh>Valor devido</MudTh>
+                        <MudTh>Vencimento</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Pagamento</MudTh>
+                        <MudTh></MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Competência">@context.Mes.ToString("D2")/@context.Ano</MudTd>
+                        <MudTd DataLabel="Valor devido">@context.ValorDevido.ToString("C")</MudTd>
+                        <MudTd DataLabel="Vencimento">@context.DataVencimento.ToString("d")</MudTd>
+                        <MudTd DataLabel="Status">
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(context.Status == StatusPagamentoAluguel.Pago ? Color.Success : Color.Warning)">@context.Status</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Pagamento">
+                            @if (context.Status == StatusPagamentoAluguel.Pago)
+                            {
+                                @($"{context.DataPagamento:d} — {context.ValorPago:C}")
+                            }
+                        </MudTd>
+                        <MudTd>
+                            @if (context.Status == StatusPagamentoAluguel.Pendente)
+                            {
+                                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success" OnClick="@(() => RegistrarPagamento(context.Id, context.ValorDevido))">Registrar pagamento</MudButton>
+                            }
+                            else
+                            {
+                                <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="@(() => GerarRepasse(context.Id))">Gerar repasse</MudButton>
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+
+            <MudGrid>
+                <MudItem xs="12" md="3">
+                    <MudNumericField T="int" @bind-Value="mesCompetencia" Label="Mês" Min="1" Max="12" />
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudNumericField T="int" @bind-Value="anoCompetencia" Label="Ano" Min="2000" Max="2100" />
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudDatePicker Label="Data de vencimento" @bind-Date="dataVencimento" />
+                </MudItem>
+                <MudItem xs="12" md="3" Class="d-flex align-center">
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="GerarPagamento">Gerar pagamento</MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    }
+
+    <MudButton Variant="Variant.Text" Href="/locacoes">Voltar</MudButton>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private LocacaoDetalheDto? locacao;
+    private string? erro;
+    private string? texto;
+
+    private decimal valorAluguel;
+    private DateTime? dataInicial = DateTime.Today;
+    private DateTime? dataFinal = DateTime.Today.AddMonths(30);
+    private int diaVencimento = 5;
+    private decimal garantia;
+    private decimal taxaAdministracao = 10;
+    private IndiceReajuste indiceReajuste = IndiceReajuste.Igpm;
+
+    private List<PagamentoAluguelItemDto>? pagamentos;
+    private int mesCompetencia = DateTime.Today.Month;
+    private int anoCompetencia = DateTime.Today.Year;
+    private DateTime? dataVencimento = DateTime.Today.AddDays(5);
+
+    protected override async Task OnInitializedAsync() => await Carregar();
+
+    private async Task Carregar()
+    {
+        var resultado = await ObterHandler.HandleAsync(new ObterLocacaoPorIdQuery(Id));
+        locacao = resultado.Value;
+
+        if (locacao?.Status == StatusLocacao.Ativa)
+        {
+            var pagamentosResultado = await ListarPagamentosHandler.HandleAsync(new ListarPagamentosAluguelQuery(Id));
+            pagamentos = pagamentosResultado.Value;
+        }
+    }
+
+    private async Task ExecutarAcao(AcaoLocacao acao)
+    {
+        var resultado = await AvancarHandler.HandleAsync(new AvancarEstagioLocacaoCommand(Id, acao, texto));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        texto = null;
+        await Carregar();
+    }
+
+    private Task RegistrarVisita() => ExecutarAcao(AcaoLocacao.RegistrarVisita);
+    private Task IniciarAnaliseCadastral() => ExecutarAcao(AcaoLocacao.IniciarAnaliseCadastral);
+    private Task Aprovar() => ExecutarAcao(AcaoLocacao.Aprovar);
+    private Task Reprovar() => ExecutarAcao(AcaoLocacao.Reprovar);
+    private Task RegistrarVistoriaEntrada() => ExecutarAcao(AcaoLocacao.RegistrarVistoriaEntrada);
+    private Task EntregarChaves() => ExecutarAcao(AcaoLocacao.EntregarChaves);
+    private Task Cancelar() => ExecutarAcao(AcaoLocacao.Cancelar);
+    private Task Encerrar() => ExecutarAcao(AcaoLocacao.Encerrar);
+
+    private async Task FormalizarContrato()
+    {
+        var comando = new FormalizarContratoLocacaoCommand(
+            Id, valorAluguel, DateOnly.FromDateTime(dataInicial ?? DateTime.Today), DateOnly.FromDateTime(dataFinal ?? DateTime.Today.AddMonths(30)),
+            diaVencimento, garantia, taxaAdministracao, indiceReajuste);
+
+        var resultado = await FormalizarHandler.HandleAsync(comando);
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+
+    private async Task GerarPagamento()
+    {
+        var comando = new GerarPagamentoAluguelCommand(
+            Id, mesCompetencia, anoCompetencia, locacao!.ValorAluguel ?? 0, DateOnly.FromDateTime(dataVencimento ?? DateTime.Today));
+
+        var resultado = await GerarPagamentoHandler.HandleAsync(comando);
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+
+    private async Task RegistrarPagamento(Guid pagamentoId, decimal valorDevido)
+    {
+        var comando = new RegistrarPagamentoAluguelCommand(pagamentoId, DateOnly.FromDateTime(DateTime.Today), valorDevido);
+        var resultado = await RegistrarPagamentoHandler.HandleAsync(comando);
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+
+    private async Task GerarRepasse(Guid pagamentoId)
+    {
+        var resultado = await GerarRepasseHandler.HandleAsync(new GerarRepasseCommand(pagamentoId));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        Navigation.NavigateTo($"/repasses/{resultado.Value}");
+    }
+}

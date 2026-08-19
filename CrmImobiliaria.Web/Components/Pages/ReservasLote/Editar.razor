@@ -1,0 +1,103 @@
+@page "/reservas-lote/{Id:guid}"
+@inject IQueryHandler<ObterReservaLotePorIdQuery, ReservaLoteDetalheDto?> ObterHandler
+@inject ICommandHandler<ExpirarReservaLoteCommand, bool> ExpirarHandler
+@inject ICommandHandler<ConverterReservaLoteCommand, bool> ConverterHandler
+@inject ICommandHandler<CancelarReservaLoteCommand, bool> CancelarHandler
+
+<PageTitle>Reserva de Lote</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Reserva de Lote</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (reserva is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.caption">Lote</MudText>
+                <MudText Typo="Typo.body1">@reserva.LoteDescricao</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Cliente</MudText>
+                <MudText Typo="Typo.body1">@reserva.ClienteNome</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Corretor</MudText>
+                <MudText Typo="Typo.body1">@reserva.CorretorNome</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Data da reserva</MudText>
+                <MudText Typo="Typo.body1">@reserva.DataReserva.ToString("dd/MM/yyyy")</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Data de expiração</MudText>
+                <MudText Typo="Typo.body1">@reserva.DataExpiracao.ToString("dd/MM/yyyy")</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Status</MudText>
+                <div><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@reserva.Status</MudChip></div>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @if (reserva.Status == StatusReservaLote.Ativa)
+    {
+        <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Ações</MudText>
+            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2">
+                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success" OnClick="Converter">Converter em venda</MudButton>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning" OnClick="Expirar">Expirar</MudButton>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="Cancelar">Cancelar</MudButton>
+            </MudStack>
+        </MudPaper>
+    }
+
+    <MudButton Variant="Variant.Text" Href="/reservas-lote">Voltar</MudButton>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private ReservaLoteDetalheDto? reserva;
+    private string? erro;
+
+    protected override async Task OnInitializedAsync() => await Carregar();
+
+    private async Task Carregar()
+    {
+        var resultado = await ObterHandler.HandleAsync(new ObterReservaLotePorIdQuery(Id));
+        reserva = resultado.Value;
+    }
+
+    private async Task Expirar()
+    {
+        var resultado = await ExpirarHandler.HandleAsync(new ExpirarReservaLoteCommand(Id));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+
+    private async Task Converter()
+    {
+        var resultado = await ConverterHandler.HandleAsync(new ConverterReservaLoteCommand(Id));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+
+    private async Task Cancelar()
+    {
+        var resultado = await CancelarHandler.HandleAsync(new CancelarReservaLoteCommand(Id));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+}

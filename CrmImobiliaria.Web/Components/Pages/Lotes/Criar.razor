@@ -1,0 +1,94 @@
+@page "/lotes/novo"
+@inject ICommandHandler<CriarLoteCommand, Guid> CriarHandler
+@inject IQueryHandler<ListarEmpreendimentosQuery, List<EmpreendimentoListaItemDto>> ListarEmpreendimentosHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Novo Lote</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Novo Lote</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (empreendimentos is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12">
+                <MudSelect T="Guid?" @bind-Value="empreendimentoId" Label="Empreendimento" Required="true">
+                    @foreach (var emp in empreendimentos)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)emp.Id)">@emp.Nome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="quadra" Label="Quadra" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="numero" Label="Número" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudNumericField T="decimal" @bind-Value="areaM2" Label="Área (m²)" Min="0.01m" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudNumericField T="decimal" @bind-Value="valor" Label="Valor" Format="N2" Adornment="Adornment.Start" AdornmentText="R$" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudNumericField T="decimal" @bind-Value="entradaMinima" Label="Entrada mínima" Format="N2" Adornment="Adornment.Start" AdornmentText="R$" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudNumericField T="int" @bind-Value="parcelamentoMaximo" Label="Parcelamento máximo (meses)" Min="1" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudNumericField T="decimal?" @bind-Value="valorPromocional" Label="Valor promocional (opcional)" Format="N2" Adornment="Adornment.Start" AdornmentText="R$" />
+            </MudItem>
+        </MudGrid>
+
+        <MudStack Row="true" Class="mt-4" Spacing="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Salvar">Salvar</MudButton>
+            <MudButton Variant="Variant.Text" Href="/lotes">Cancelar</MudButton>
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    private List<EmpreendimentoListaItemDto>? empreendimentos;
+    private string? erro;
+
+    private Guid? empreendimentoId;
+    private string? quadra;
+    private string? numero;
+    private decimal areaM2 = 250;
+    private decimal valor = 50000;
+    private decimal entradaMinima = 5000;
+    private int parcelamentoMaximo = 60;
+    private decimal? valorPromocional;
+
+    protected override async Task OnInitializedAsync()
+    {
+        empreendimentos = (await ListarEmpreendimentosHandler.HandleAsync(new ListarEmpreendimentosQuery())).Value;
+    }
+
+    private async Task Salvar()
+    {
+        var comando = new CriarLoteCommand(
+            empreendimentoId ?? Guid.Empty, quadra, numero, areaM2, valor, entradaMinima, parcelamentoMaximo, valorPromocional);
+
+        var resultado = await CriarHandler.HandleAsync(comando);
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        Navigation.NavigateTo("/lotes");
+    }
+}

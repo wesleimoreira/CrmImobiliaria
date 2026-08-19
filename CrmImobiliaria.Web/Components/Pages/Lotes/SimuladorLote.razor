@@ -1,0 +1,137 @@
+@page "/simulador-lote"
+@using CrmImobiliaria.Domain.ValueObjects
+@using CrmImobiliaria.Domain.Entities
+@inject IQueryHandler<ListarLotesQuery, List<LoteListaItemDto>> ListarLotesHandler
+
+<PageTitle>Simulador de Lote</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Simulador de Lote</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudSelect T="Guid?" @bind-Value="loteId" Label="Carregar valores de um lote (opcional)" Clearable="true" @bind-Value:after="OnLoteSelecionado">
+                @if (lotes is not null)
+                {
+                    @foreach (var lote in lotes)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)lote.Id)">@lote.EmpreendimentoNome — Q.@lote.Quadra/@lote.Numero</MudSelectItem>
+                    }
+                }
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
+
+    <MudGrid Class="mt-2">
+        <MudItem xs="12" md="4">
+            <MudNumericField T="decimal" @bind-Value="valorLote" Label="Valor do lote" Format="N2" Adornment="Adornment.Start" AdornmentText="R$" />
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudNumericField T="decimal" @bind-Value="entrada" Label="Entrada" Format="N2" Adornment="Adornment.Start" AdornmentText="R$" />
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudNumericField T="int" @bind-Value="numeroParcelas" Label="Número de parcelas" Min="1" />
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudNumericField T="decimal" @bind-Value="desconto" Label="Desconto (opcional)" Format="0.##" Adornment="Adornment.End" AdornmentText="%" Min="0" Max="100" />
+        </MudItem>
+    </MudGrid>
+
+    <MudButton Class="mt-4" Variant="Variant.Filled" Color="Color.Primary" OnClick="Simular">Simular</MudButton>
+</MudPaper>
+
+@if (resultado is not null)
+{
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudText Typo="Typo.subtitle1" Class="mb-3">Resultado da simulação</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudText Typo="Typo.caption">Valor do lote</MudText>
+                <MudText Typo="Typo.body1">@resultado.ValorLote.Valor.ToString("C")</MudText>
+            </MudItem>
+            @if (resultado.Desconto is not null)
+            {
+                <MudItem xs="12" md="4">
+                    <MudText Typo="Typo.caption">Desconto</MudText>
+                    <MudText Typo="Typo.body1">@resultado.Desconto.Valor.ToString("0.##")%</MudText>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudText Typo="Typo.caption">Valor com desconto</MudText>
+                    <MudText Typo="Typo.body1">@resultado.ValorComDesconto.Valor.ToString("C")</MudText>
+                </MudItem>
+            }
+            <MudItem xs="12" md="4">
+                <MudText Typo="Typo.caption">Entrada</MudText>
+                <MudText Typo="Typo.body1">@resultado.Entrada.Valor.ToString("C")</MudText>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudText Typo="Typo.caption">Saldo financiado</MudText>
+                <MudText Typo="Typo.body1">@resultado.SaldoFinanciado.Valor.ToString("C")</MudText>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudText Typo="Typo.caption">Parcelas</MudText>
+                <MudText Typo="Typo.body1">@resultado.NumeroParcelas x @resultado.ValorParcela.Valor.ToString("C")</MudText>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+}
+
+@code {
+    private List<LoteListaItemDto>? lotes;
+    private Guid? loteId;
+    private string? erro;
+    private SimulacaoParcelamento? resultado;
+
+    private decimal valorLote = 50000;
+    private decimal entrada = 5000;
+    private int numeroParcelas = 60;
+    private decimal desconto;
+
+    protected override async Task OnInitializedAsync()
+    {
+        lotes = (await ListarLotesHandler.HandleAsync(new ListarLotesQuery())).Value;
+    }
+
+    private void OnLoteSelecionado()
+    {
+        var lote = lotes?.FirstOrDefault(l => l.Id == loteId);
+        if (lote is not null)
+            valorLote = lote.ValorVigente;
+    }
+
+    private void Simular()
+    {
+        resultado = null;
+
+        var valorLoteResultado = Dinheiro.CriarPositivo(valorLote);
+        if (!valorLoteResultado.IsSuccess) { erro = valorLoteResultado.Error; return; }
+
+        var entradaResultado = Dinheiro.Criar(entrada);
+        if (!entradaResultado.IsSuccess) { erro = entradaResultado.Error; return; }
+
+        Percentual? descontoValueObject = null;
+        if (desconto > 0)
+        {
+            var descontoResultado = Percentual.Criar(desconto);
+            if (!descontoResultado.IsSuccess) { erro = descontoResultado.Error; return; }
+            descontoValueObject = descontoResultado.Value!;
+        }
+
+        var simulacaoResultado = CrmImobiliaria.Domain.Entities.SimuladorLote.Simular(
+            valorLoteResultado.Value!, entradaResultado.Value!, numeroParcelas, descontoValueObject);
+
+        if (!simulacaoResultado.IsSuccess)
+        {
+            erro = simulacaoResultado.Error;
+            return;
+        }
+
+        erro = null;
+        resultado = simulacaoResultado.Value;
+    }
+}

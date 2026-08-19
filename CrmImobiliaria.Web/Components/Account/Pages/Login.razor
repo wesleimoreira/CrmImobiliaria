@@ -1,0 +1,119 @@
+@page "/conta/login"
+@layout Layout.EmptyLayout
+@attribute [ExcludeFromInteractiveRouting]
+@attribute [AllowAnonymous]
+
+@using System.ComponentModel.DataAnnotations
+@using CrmImobiliaria.Infrastructure.Identity
+@using Microsoft.AspNetCore.Identity
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Entrar — CRM Imobiliária</PageTitle>
+
+<div class="login-page">
+    <div class="login-card">
+        <h1>CRM Imobiliária</h1>
+        <p class="subtitle">Entre com sua conta para continuar</p>
+
+        @if (erro is not null)
+        {
+            <div class="erro-msg">@erro</div>
+        }
+
+        <EditForm Model="Input" method="post" OnValidSubmit="EntrarAsync" FormName="login">
+            <DataAnnotationsValidator />
+
+            <div class="campo">
+                <label for="email">E-mail</label>
+                <InputText id="email" @bind-Value="Input.Email" autocomplete="username" autofocus placeholder="nome@empresa.com" />
+                <ValidationMessage For="() => Input.Email" />
+            </div>
+
+            <div class="campo">
+                <label for="senha">Senha</label>
+                <InputText id="senha" type="password" @bind-Value="Input.Senha" autocomplete="current-password" placeholder="Senha" />
+                <ValidationMessage For="() => Input.Senha" />
+            </div>
+
+            <div class="campo campo-checkbox">
+                <label>
+                    <InputCheckbox @bind-Value="Input.LembrarMe" />
+                    Manter conectado
+                </label>
+            </div>
+
+            <button type="submit" class="btn-entrar">Entrar</button>
+        </EditForm>
+    </div>
+</div>
+
+<style>
+    .login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #F4F6F8; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    .login-card { background: #FFFFFF; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 2.5rem; width: 100%; max-width: 380px; }
+    .login-card h1 { color: #1B3A5F; font-size: 1.5rem; margin: 0 0 0.25rem; }
+    .subtitle { color: #6B7280; margin: 0 0 1.5rem; font-size: 0.9rem; }
+    .campo { margin-bottom: 1rem; display: flex; flex-direction: column; }
+    .campo label { font-size: 0.85rem; color: #1F2937; margin-bottom: 0.3rem; }
+    .campo input[type="text"], .campo input[type="password"], .campo input[type="email"] {
+        padding: 0.6rem 0.75rem; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.95rem;
+    }
+    .campo input:focus { outline: none; border-color: #1B3A5F; }
+    .campo-checkbox label { flex-direction: row; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
+    .validation-message { color: #B91C1C; font-size: 0.8rem; margin-top: 0.25rem; }
+    .erro-msg { background: #FEF2F2; color: #B91C1C; border: 1px solid #FCA5A5; border-radius: 6px; padding: 0.6rem 0.75rem; margin-bottom: 1rem; font-size: 0.85rem; }
+    .btn-entrar { width: 100%; background: #1B3A5F; color: #fff; border: none; border-radius: 6px; padding: 0.7rem; font-size: 1rem; cursor: pointer; margin-top: 0.5rem; }
+    .btn-entrar:hover { background: #12253A; }
+</style>
+
+@code {
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private string? erro;
+
+    protected override void OnInitialized()
+    {
+        Input ??= new InputModel();
+    }
+
+    private async Task EntrarAsync()
+    {
+        var resultado = await SignInManager.PasswordSignInAsync(
+            Input.Email, Input.Senha, Input.LembrarMe, lockoutOnFailure: true);
+
+        if (resultado.Succeeded)
+        {
+            var usuario = await SignInManager.UserManager.FindByEmailAsync(Input.Email);
+            if (usuario is { Ativo: false })
+            {
+                await SignInManager.SignOutAsync();
+                erro = "Esta conta está desativada.";
+                return;
+            }
+
+            RedirectManager.RedirectTo(ReturnUrl ?? "/");
+            return;
+        }
+
+        erro = resultado.IsLockedOut
+            ? "Conta bloqueada temporariamente por excesso de tentativas. Tente novamente mais tarde."
+            : "E-mail ou senha inválidos.";
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "Informe o e-mail.")]
+        [EmailAddress(ErrorMessage = "E-mail inválido.")]
+        public string Email { get; set; } = "";
+
+        [Required(ErrorMessage = "Informe a senha.")]
+        public string Senha { get; set; } = "";
+
+        public bool LembrarMe { get; set; }
+    }
+}

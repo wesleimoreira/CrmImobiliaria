@@ -1,0 +1,70 @@
+@page "/locacoes"
+@inject IQueryHandler<ListarLocacoesQuery, List<LocacaoListaItemDto>> ListarHandler
+
+<PageTitle>Locações</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Locações</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" sm="6">
+            <MudTextField T="string" @bind-Value="termo" Label="Buscar por locatário" Adornment="Adornment.Start"
+                         AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true"
+                         DebounceInterval="300" OnDebounceIntervalElapsed="OnTermoAlterado" />
+        </MudItem>
+        <MudItem xs="12" sm="6" Class="d-flex justify-end">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Href="/locacoes/nova">
+                Nova Locação
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudTable Items="@locacoes" Hover="true" Loading="@(locacoes is null)" Elevation="0" Outlined="true">
+    <HeaderContent>
+        <MudTh>Locatário</MudTh>
+        <MudTh>Imóvel</MudTh>
+        <MudTh>Estágio</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Aluguel</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Locatário">@context.LocatarioNome</MudTd>
+        <MudTd DataLabel="Imóvel">@context.ImovelEndereco</MudTd>
+        <MudTd DataLabel="Estágio">@context.EstagioAtual</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@CorPorStatus(context.Status)">@context.Status</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Aluguel">@(context.ValorAluguel?.ToString("C") ?? "—")</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Href="@($"/locacoes/{context.Id}")" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>Nenhuma locação cadastrada.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<LocacaoListaItemDto>? locacoes;
+    private string? termo;
+
+    protected override async Task OnInitializedAsync() => await Buscar();
+
+    private async Task OnTermoAlterado(string valor) => await Buscar();
+
+    private async Task Buscar()
+    {
+        var resultado = await ListarHandler.HandleAsync(new ListarLocacoesQuery(termo));
+        locacoes = resultado.Value;
+    }
+
+    private static Color CorPorStatus(StatusLocacao status) => status switch
+    {
+        StatusLocacao.Ativa => Color.Success,
+        StatusLocacao.Encerrada => Color.Default,
+        StatusLocacao.Reprovada or StatusLocacao.Cancelada => Color.Error,
+        _ => Color.Info
+    };
+}

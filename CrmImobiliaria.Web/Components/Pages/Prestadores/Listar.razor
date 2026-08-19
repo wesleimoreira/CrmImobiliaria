@@ -1,0 +1,61 @@
+@page "/prestadores"
+@inject IQueryHandler<ListarPrestadoresQuery, List<PrestadorListaItemDto>> ListarHandler
+@inject ICommandHandler<AlterarStatusPrestadorCommand, bool> AlterarStatusHandler
+
+<PageTitle>Prestadores</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Prestadores</MudText>
+
+<div class="d-flex justify-end mb-4">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Href="/prestadores/novo">
+        Novo Prestador
+    </MudButton>
+</div>
+
+<MudTable Items="@prestadores" Hover="true" Loading="@(prestadores is null)" Elevation="0" Outlined="true">
+    <HeaderContent>
+        <MudTh>Nome</MudTh>
+        <MudTh>Telefone</MudTh>
+        <MudTh>E-mail</MudTh>
+        <MudTh>Especialidade</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Nome">@context.Nome</MudTd>
+        <MudTd DataLabel="Telefone">@context.Telefone</MudTd>
+        <MudTd DataLabel="E-mail">@context.Email</MudTd>
+        <MudTd DataLabel="Especialidade">@context.Especialidade</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(context.Ativo ? Color.Success : Color.Default)">
+                @(context.Ativo ? "Ativo" : "Inativo")
+            </MudChip>
+        </MudTd>
+        <MudTd>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="@(() => AlterarStatus(context.Id, !context.Ativo))">
+                @(context.Ativo ? "Inativar" : "Reativar")
+            </MudButton>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>Nenhum prestador cadastrado.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<PrestadorListaItemDto>? prestadores;
+
+    protected override async Task OnInitializedAsync() => await Carregar();
+
+    private async Task Carregar()
+    {
+        var resultado = await ListarHandler.HandleAsync(new ListarPrestadoresQuery());
+        prestadores = resultado.Value;
+    }
+
+    private async Task AlterarStatus(Guid id, bool ativo)
+    {
+        await AlterarStatusHandler.HandleAsync(new AlterarStatusPrestadorCommand(id, ativo));
+        await Carregar();
+    }
+}

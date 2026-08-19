@@ -1,0 +1,111 @@
+@page "/vistorias/{Id:guid}"
+@inject IQueryHandler<ObterVistoriaPorIdQuery, VistoriaDetalheDto?> ObterHandler
+@inject ICommandHandler<RegistrarRealizacaoVistoriaCommand, bool> RegistrarRealizacaoHandler
+@inject ICommandHandler<CancelarVistoriaCommand, bool> CancelarHandler
+
+<PageTitle>Vistoria</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Vistoria</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (vistoria is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.caption">Imóvel</MudText>
+                <MudText Typo="Typo.body1">@vistoria.ImovelEndereco</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Tipo</MudText>
+                <MudText Typo="Typo.body1">@vistoria.Tipo</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Responsável</MudText>
+                <MudText Typo="Typo.body1">@vistoria.ResponsavelNome</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Data agendada</MudText>
+                <MudText Typo="Typo.body1">@vistoria.DataAgendada.ToString("g")</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Status</MudText>
+                <div><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(vistoria.Status == StatusVistoria.Realizada ? Color.Success : vistoria.Status == StatusVistoria.Cancelada ? Color.Error : Color.Default)">@vistoria.Status</MudChip></div>
+            </MudItem>
+            @if (vistoria.DataRealizada is not null)
+            {
+                <MudItem xs="12" md="3">
+                    <MudText Typo="Typo.caption">Data realizada</MudText>
+                    <MudText Typo="Typo.body1">@vistoria.DataRealizada?.ToString("g")</MudText>
+                </MudItem>
+            }
+            @if (!string.IsNullOrWhiteSpace(vistoria.Observacoes))
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.caption">Observações</MudText>
+                    <MudText Typo="Typo.body1">@vistoria.Observacoes</MudText>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
+
+    @if (vistoria.Status == StatusVistoria.Agendada)
+    {
+        <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Registrar realização</MudText>
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="observacoes" Label="Observações" />
+                </MudItem>
+                <MudItem xs="12" md="3" Class="d-flex align-center">
+                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success" OnClick="RegistrarRealizacao">Registrar realização</MudButton>
+                </MudItem>
+                <MudItem xs="12" md="3" Class="d-flex align-center">
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="Cancelar">Cancelar vistoria</MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    }
+
+    <MudButton Variant="Variant.Text" Href="/vistorias">Voltar</MudButton>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private VistoriaDetalheDto? vistoria;
+    private string? erro;
+    private string? observacoes;
+
+    protected override async Task OnInitializedAsync() => await Carregar();
+
+    private async Task Carregar()
+    {
+        var resultado = await ObterHandler.HandleAsync(new ObterVistoriaPorIdQuery(Id));
+        vistoria = resultado.Value;
+    }
+
+    private async Task RegistrarRealizacao()
+    {
+        var resultado = await RegistrarRealizacaoHandler.HandleAsync(new RegistrarRealizacaoVistoriaCommand(Id, DateTime.Now, observacoes));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+
+    private async Task Cancelar()
+    {
+        var resultado = await CancelarHandler.HandleAsync(new CancelarVistoriaCommand(Id, observacoes));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+}

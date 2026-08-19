@@ -1,0 +1,65 @@
+@page "/clientes"
+@inject IQueryHandler<ListarClientesQuery, List<ClienteListaItemDto>> ListarHandler
+
+<PageTitle>Clientes</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Clientes</MudText>
+
+<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+    <MudGrid>
+        <MudItem xs="12" sm="6">
+            <MudTextField T="string" @bind-Value="termo" Label="Buscar por nome" Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true"
+                          DebounceInterval="300" OnDebounceIntervalElapsed="OnTermoAlterado" />
+        </MudItem>
+        <MudItem xs="12" sm="6" Class="d-flex justify-end">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Href="/clientes/novo">
+                Novo Cliente
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudTable Items="@clientes" Hover="true" Loading="@(clientes is null)" Elevation="0" Outlined="true">
+    <HeaderContent>
+        <MudTh>Nome</MudTh>
+        <MudTh>Telefone</MudTh>
+        <MudTh>E-mail</MudTh>
+        <MudTh>Tipos</MudTh>
+        <MudTh>Corretor responsável</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Nome">@context.Nome</MudTd>
+        <MudTd DataLabel="Telefone">@context.Telefone</MudTd>
+        <MudTd DataLabel="E-mail">@context.Email</MudTd>
+        <MudTd DataLabel="Tipos">
+            @foreach (var tipo in context.Tipos.Split(", ", StringSplitOptions.RemoveEmptyEntries))
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined" Class="mr-1">@tipo</MudChip>
+            }
+        </MudTd>
+        <MudTd DataLabel="Corretor responsável">@context.CorretorNome</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Href="@($"/clientes/{context.Id}")" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>Nenhum cliente encontrado.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<ClienteListaItemDto>? clientes;
+    private string? termo;
+
+    protected override async Task OnInitializedAsync() => await Buscar();
+
+    private async Task OnTermoAlterado(string valor) => await Buscar();
+
+    private async Task Buscar()
+    {
+        var resultado = await ListarHandler.HandleAsync(new ListarClientesQuery(termo));
+        clientes = resultado.Value;
+    }
+}

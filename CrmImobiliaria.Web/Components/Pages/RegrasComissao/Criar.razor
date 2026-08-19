@@ -1,0 +1,87 @@
+@page "/regras-comissao/nova"
+@using CrmImobiliaria.Domain.Enums
+@inject ICommandHandler<CriarRegraComissaoCommand, Guid> CriarHandler
+@inject IQueryHandler<ListarImoveisQuery, List<ImovelListaItemDto>> ListarImoveisHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Nova Regra de Comissão</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Nova Regra de Comissão</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (imoveis is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="nome" Label="Nome da regra" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudNumericField T="decimal" @bind-Value="percentualTotal" Label="% Comissão total" Format="0.##" Adornment="Adornment.End" AdornmentText="%" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudSelect T="Guid?" @bind-Value="imovelId" Label="Imóvel vinculado (opcional)" Clearable="true">
+                    @foreach (var imovel in imoveis)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)imovel.Id)">@imovel.Endereco</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Rateio (a soma dos percentuais preenchidos deve totalizar 100%)</MudText>
+        <MudGrid>
+            @foreach (var papel in Enum.GetValues<PapelComissao>())
+            {
+                <MudItem xs="12" md="4">
+                    <MudNumericField T="decimal" Value="rateio[papel]" ValueChanged="@(v => rateio[papel] = v)" Label="@papel.ToString()" Format="0.##" Adornment="Adornment.End" AdornmentText="%" />
+                </MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
+
+    <MudStack Row="true" Spacing="2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Salvar">Salvar</MudButton>
+        <MudButton Variant="Variant.Text" Href="/regras-comissao">Cancelar</MudButton>
+    </MudStack>
+}
+
+@code {
+    private List<ImovelListaItemDto>? imoveis;
+    private string? erro;
+
+    private string nome = string.Empty;
+    private decimal percentualTotal;
+    private Guid? imovelId;
+    private Dictionary<PapelComissao, decimal> rateio = Enum.GetValues<PapelComissao>().ToDictionary(p => p, _ => 0m);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultado = await ListarImoveisHandler.HandleAsync(new ListarImoveisQuery(null));
+        imoveis = resultado.Value;
+    }
+
+    private async Task Salvar()
+    {
+        var comando = new CriarRegraComissaoCommand(nome, percentualTotal, imovelId, rateio);
+        var resultado = await CriarHandler.HandleAsync(comando);
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        Navigation.NavigateTo("/regras-comissao");
+    }
+}

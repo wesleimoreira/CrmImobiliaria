@@ -1,0 +1,58 @@
+@page "/reservas-lote"
+@inject IQueryHandler<ListarReservasLoteQuery, List<ReservaLoteListaItemDto>> ListarHandler
+
+<PageTitle>Reservas de Lote</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Reservas de Lote</MudText>
+
+<MudStack Row="true" Justify="Justify.FlexEnd" Class="mb-4">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Href="/reservas-lote/nova">
+        Nova Reserva
+    </MudButton>
+</MudStack>
+
+<MudTable Items="@reservas" Hover="true" Loading="@(reservas is null)" Elevation="0" Outlined="true">
+    <HeaderContent>
+        <MudTh>Lote</MudTh>
+        <MudTh>Cliente</MudTh>
+        <MudTh>Corretor</MudTh>
+        <MudTh>Data reserva</MudTh>
+        <MudTh>Data expiração</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Lote">@context.LoteDescricao</MudTd>
+        <MudTd DataLabel="Cliente">@context.ClienteNome</MudTd>
+        <MudTd DataLabel="Corretor">@context.CorretorNome</MudTd>
+        <MudTd DataLabel="Data reserva">@context.DataReserva.ToString("dd/MM/yyyy")</MudTd>
+        <MudTd DataLabel="Data expiração">@context.DataExpiracao.ToString("dd/MM/yyyy")</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@CorPorStatus(context.Status)">@context.Status</MudChip>
+        </MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Href="@($"/reservas-lote/{context.Id}")" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>Nenhuma reserva cadastrada.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<ReservaLoteListaItemDto>? reservas;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultado = await ListarHandler.HandleAsync(new ListarReservasLoteQuery());
+        reservas = resultado.Value;
+    }
+
+    private static Color CorPorStatus(StatusReservaLote status) => status switch
+    {
+        StatusReservaLote.Convertida => Color.Success,
+        StatusReservaLote.Expirada or StatusReservaLote.Cancelada => Color.Error,
+        StatusReservaLote.Ativa => Color.Info,
+        _ => Color.Default
+    };
+}

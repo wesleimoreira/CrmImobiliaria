@@ -1,0 +1,104 @@
+@page "/reservas-lote/nova"
+@inject ICommandHandler<CriarReservaLoteCommand, Guid> CriarHandler
+@inject IQueryHandler<ListarLotesQuery, List<LoteListaItemDto>> ListarLotesHandler
+@inject IQueryHandler<ListarClientesQuery, List<ClienteListaItemDto>> ListarClientesHandler
+@inject IQueryHandler<ListarCorretoresQuery, List<CorretorResumoDto>> ListarCorretoresHandler
+@inject NavigationManager Navigation
+
+<PageTitle>Nova Reserva de Lote</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Nova Reserva de Lote</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (lotes is null || clientes is null || corretores is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="loteId" Label="Lote" Required="true">
+                    @foreach (var lote in lotes)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)lote.Id)">@lote.EmpreendimentoNome — Quadra @lote.Quadra, Lote @lote.Numero</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="clienteId" Label="Cliente" Required="true">
+                    @foreach (var cliente in clientes)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)cliente.Id)">@cliente.Nome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" @bind-Value="corretorId" Label="Corretor" Required="true">
+                    @foreach (var corretor in corretores)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)corretor.Id)">@corretor.Nome</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudDatePicker Label="Data da reserva" @bind-Date="dataReserva" />
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudNumericField T="int" @bind-Value="prazoDias" Label="Prazo (dias)" Min="1" />
+            </MudItem>
+        </MudGrid>
+
+        <MudStack Row="true" Class="mt-4" Spacing="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Salvar">Salvar</MudButton>
+            <MudButton Variant="Variant.Text" Href="/reservas-lote">Cancelar</MudButton>
+        </MudStack>
+    </MudPaper>
+}
+
+@code {
+    private List<LoteListaItemDto>? lotes;
+    private List<ClienteListaItemDto>? clientes;
+    private List<CorretorResumoDto>? corretores;
+    private string? erro;
+
+    private Guid? loteId;
+    private Guid? clienteId;
+    private Guid? corretorId;
+    private DateTime? dataReserva = DateTime.Today;
+    private int prazoDias = 15;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resultadoLotes = (await ListarLotesHandler.HandleAsync(new ListarLotesQuery())).Value ?? [];
+        lotes = resultadoLotes.Where(l => l.Status == StatusLote.Disponivel).ToList();
+        clientes = (await ListarClientesHandler.HandleAsync(new ListarClientesQuery(null))).Value;
+        corretores = (await ListarCorretoresHandler.HandleAsync(new ListarCorretoresQuery())).Value;
+    }
+
+    private async Task Salvar()
+    {
+        if (loteId is null || clienteId is null || corretorId is null || dataReserva is null)
+        {
+            erro = "Preencha todos os campos.";
+            return;
+        }
+
+        var comando = new CriarReservaLoteCommand(
+            loteId.Value, clienteId.Value, corretorId.Value, DateOnly.FromDateTime(dataReserva.Value), prazoDias);
+        var resultado = await CriarHandler.HandleAsync(comando);
+
+        if (!resultado.IsSuccess)
+        {
+            erro = resultado.Error;
+            return;
+        }
+
+        Navigation.NavigateTo("/reservas-lote");
+    }
+}

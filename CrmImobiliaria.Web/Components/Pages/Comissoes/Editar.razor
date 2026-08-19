@@ -1,0 +1,138 @@
+@page "/comissoes/{Id:guid}"
+@inject IQueryHandler<ObterComissaoPorIdQuery, ComissaoDetalheDto?> ObterHandler
+@inject ICommandHandler<RegistrarRecebimentoComissaoCommand, bool> RecebimentoHandler
+@inject ICommandHandler<RegistrarDistribuicaoComissaoCommand, bool> DistribuicaoHandler
+
+<PageTitle>Comissão</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Comissão</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (comissao is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Origem</MudText>
+                <MudText Typo="Typo.body1">@comissao.OrigemTipo</MudText>
+            </MudItem>
+            @if (comissao.ClienteNome is not null)
+            {
+                <MudItem xs="12" md="3">
+                    <MudText Typo="Typo.caption">Cliente</MudText>
+                    <MudText Typo="Typo.body1">@comissao.ClienteNome</MudText>
+                </MudItem>
+            }
+            @if (comissao.ImovelEndereco is not null)
+            {
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.caption">Imóvel</MudText>
+                    <MudText Typo="Typo.body1">@comissao.ImovelEndereco</MudText>
+                </MudItem>
+            }
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Valor base</MudText>
+                <MudText Typo="Typo.body1">@comissao.ValorBase.ToString("C")</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">% Comissão</MudText>
+                <MudText Typo="Typo.body1">@comissao.PercentualComissao.ToString("0.##")%</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Comissão total</MudText>
+                <MudText Typo="Typo.body1">@comissao.ComissaoTotal.ToString("C")</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Saldo (recebido - distribuído)</MudText>
+                <MudText Typo="Typo.body1">@comissao.Saldo.ToString("C")</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Recebida</MudText>
+                <MudText Typo="Typo.body1">@comissao.ComissaoRecebida.ToString("C")</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Distribuída</MudText>
+                <MudText Typo="Typo.body1">@comissao.ComissaoDistribuida.ToString("C")</MudText>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Rateio</MudText>
+        <MudTable Items="@comissao.Rateio" Dense="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Papel</MudTh>
+                <MudTh>%</MudTh>
+                <MudTh>Valor</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Papel">@context.Papel</MudTd>
+                <MudTd DataLabel="%">@context.Percentual.ToString("0.##")%</MudTd>
+                <MudTd DataLabel="Valor">@context.Valor.ToString("C")</MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Ações</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudNumericField T="decimal" @bind-Value="valorRecebimento" Label="Valor recebido" Format="N2" Adornment="Adornment.Start" AdornmentText="R$" />
+            </MudItem>
+            <MudItem xs="12" md="2" Class="d-flex align-center">
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success" OnClick="RegistrarRecebimento">Registrar Recebimento</MudButton>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudNumericField T="decimal" @bind-Value="valorDistribuicao" Label="Valor distribuído" Format="N2" Adornment="Adornment.Start" AdornmentText="R$" />
+            </MudItem>
+            <MudItem xs="12" md="2" Class="d-flex align-center">
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="RegistrarDistribuicao">Registrar Distribuição</MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudButton Variant="Variant.Text" Href="/comissoes">Voltar</MudButton>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private ComissaoDetalheDto? comissao;
+    private string? erro;
+    private decimal valorRecebimento;
+    private decimal valorDistribuicao;
+
+    protected override async Task OnInitializedAsync() => await Carregar();
+
+    private async Task Carregar()
+    {
+        var resultado = await ObterHandler.HandleAsync(new ObterComissaoPorIdQuery(Id));
+        comissao = resultado.Value;
+    }
+
+    private async Task RegistrarRecebimento()
+    {
+        var resultado = await RecebimentoHandler.HandleAsync(new RegistrarRecebimentoComissaoCommand(Id, valorRecebimento));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        valorRecebimento = 0;
+        await Carregar();
+    }
+
+    private async Task RegistrarDistribuicao()
+    {
+        var resultado = await DistribuicaoHandler.HandleAsync(new RegistrarDistribuicaoComissaoCommand(Id, valorDistribuicao));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        valorDistribuicao = 0;
+        await Carregar();
+    }
+}

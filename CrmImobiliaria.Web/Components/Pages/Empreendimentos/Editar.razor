@@ -1,0 +1,138 @@
+@page "/empreendimentos/{Id:guid}"
+@inject IQueryHandler<ObterEmpreendimentoPorIdQuery, EmpreendimentoDetalheDto?> ObterHandler
+@inject ICommandHandler<AvancarStatusEmpreendimentoCommand, bool> AvancarStatusHandler
+@inject ICommandHandler<DefinirCampanhaEmpreendimentoCommand, bool> DefinirCampanhaHandler
+
+<PageTitle>Empreendimento</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Empreendimento</MudText>
+
+@if (erro is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@erro</MudAlert>
+}
+
+@if (empreendimento is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.caption">Nome</MudText>
+                <MudText Typo="Typo.body1">@empreendimento.Nome</MudText>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.caption">Loteadora/Incorporadora</MudText>
+                <MudText Typo="Typo.body1">@empreendimento.LoteadoraIncorporadora</MudText>
+            </MudItem>
+            <MudItem xs="12">
+                <MudText Typo="Typo.caption">Localização</MudText>
+                <MudText Typo="Typo.body1">@empreendimento.Localizacao</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Total de lotes</MudText>
+                <MudText Typo="Typo.body1">@empreendimento.TotalLotes</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Número de quadras</MudText>
+                <MudText Typo="Typo.body1">@empreendimento.NumeroQuadras</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">% Comissão</MudText>
+                <MudText Typo="Typo.body1">@empreendimento.PercentualComissao.ToString("0.##")%</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.caption">Status</MudText>
+                <div><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@empreendimento.Status</MudChip></div>
+            </MudItem>
+            @if (empreendimento.DataLancamento is not null)
+            {
+                <MudItem xs="12" md="3">
+                    <MudText Typo="Typo.caption">Data de lançamento</MudText>
+                    <MudText Typo="Typo.body1">@empreendimento.DataLancamento?.ToString("d")</MudText>
+                </MudItem>
+            }
+            @if (!string.IsNullOrWhiteSpace(empreendimento.CampanhaVigente))
+            {
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.caption">Campanha vigente</MudText>
+                    <MudText Typo="Typo.body1">@empreendimento.CampanhaVigente</MudText>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
+
+    @if (empreendimento.Status != StatusEmpreendimento.Encerrado)
+    {
+        <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Ações</MudText>
+            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" Class="mb-3">
+                @if (empreendimento.Status == StatusEmpreendimento.EmCaptacao)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" OnClick="Lancar">Lançar</MudButton>
+                }
+                @if (empreendimento.Status == StatusEmpreendimento.Lancado)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success" OnClick="IniciarComercializacao">Iniciar comercialização</MudButton>
+                }
+                @if (empreendimento.Status != StatusEmpreendimento.Suspenso)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning" OnClick="Suspender">Suspender</MudButton>
+                }
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" OnClick="Encerrar">Encerrar</MudButton>
+            </MudStack>
+
+            <MudGrid>
+                <MudItem xs="12" md="8">
+                    <MudTextField T="string" @bind-Value="campanha" Label="Campanha vigente" />
+                </MudItem>
+                <MudItem xs="12" md="4" Class="d-flex align-center">
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="DefinirCampanha">Atualizar campanha</MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    }
+
+    <MudButton Variant="Variant.Text" Href="/empreendimentos">Voltar</MudButton>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private EmpreendimentoDetalheDto? empreendimento;
+    private string? erro;
+    private string? campanha;
+
+    protected override async Task OnInitializedAsync() => await Carregar();
+
+    private async Task Carregar()
+    {
+        var resultado = await ObterHandler.HandleAsync(new ObterEmpreendimentoPorIdQuery(Id));
+        empreendimento = resultado.Value;
+        campanha = empreendimento?.CampanhaVigente;
+    }
+
+    private async Task ExecutarAcao(AcaoEmpreendimento acao, DateOnly? dataLancamento = null)
+    {
+        var resultado = await AvancarStatusHandler.HandleAsync(new AvancarStatusEmpreendimentoCommand(Id, acao, dataLancamento));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+
+    private Task Lancar() => ExecutarAcao(AcaoEmpreendimento.Lancar, DateOnly.FromDateTime(DateTime.Today));
+    private Task IniciarComercializacao() => ExecutarAcao(AcaoEmpreendimento.IniciarComercializacao);
+    private Task Suspender() => ExecutarAcao(AcaoEmpreendimento.Suspender);
+    private Task Encerrar() => ExecutarAcao(AcaoEmpreendimento.Encerrar);
+
+    private async Task DefinirCampanha()
+    {
+        var resultado = await DefinirCampanhaHandler.HandleAsync(new DefinirCampanhaEmpreendimentoCommand(Id, campanha));
+        if (!resultado.IsSuccess) { erro = resultado.Error; return; }
+        erro = null;
+        await Carregar();
+    }
+}
