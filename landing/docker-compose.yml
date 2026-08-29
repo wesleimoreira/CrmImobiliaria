@@ -9,7 +9,7 @@ services:
     networks:
       - proxy
     # Sem porta publicada no host — o proxy Caddy (rede externa "proxy") expõe
-    # publicamente, via primefrota.cloud, com HTTPS automático.
+    # publicamente, via example.com, com HTTPS automático.
 
 networks:
   proxy:

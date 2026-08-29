@@ -37,7 +37,7 @@ services:
       - default
       - proxy
     # Não publica porta no host — o proxy Caddy (rede externa "proxy") é quem expõe
-    # publicamente, via crm.primefrota.cloud, com HTTPS automático.
+    # publicamente, via crm.example.com, com HTTPS automático.
 
 networks:
   proxy:
