@@ -116,7 +116,7 @@ static async Task SeedIdentityAsync(WebApplication app)
 
     var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
     var email = configuration["Seed:AdminEmail"] ?? "admin@crm.local";
-    var senha = configuration["Seed:AdminPassword"] ?? "Admin@12345";
+    var senha = configuration["Seed:AdminPassword"] ?? "ChangeMe#2026";
 
     var admin = new ApplicationUser
     {
